@@ -1,0 +1,22 @@
+{
+  "name": "leadpilot",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "db:generate": "npm --workspace apps/web run db:generate",
+    "db:migrate": "npm --workspace apps/web run db:migrate",
+    "db:seed": "npm --workspace apps/web run db:seed"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.14",
+    "typescript": "^5.5.4"
+  }
+}

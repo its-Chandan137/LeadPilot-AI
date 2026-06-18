@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id         String            @id @default(cuid())
+  email      String            @unique
+  name       String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  workspaces WorkspaceMember[]
+}
+
+model Workspace {
+  id        String            @id @default(cuid())
+  name      String
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  members   WorkspaceMember[]
+  projects  Project[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        Role      @default(MEMBER)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model Project {
+  id            String         @id @default(cuid())
+  workspaceId   String
+  name          String
+  siteUrl       String
+  clientId      String         @unique @default(cuid())
+  widgetConfig  Json           @default("{}")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+  leads         Lead[]
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  projectId String
+  visitorId String
+  createdAt DateTime  @default(now())
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  lead      Lead?
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id             String       @id @default(cuid())
+  projectId      String
+  conversationId String       @unique
+  name           String?
+  email          String?
+  phone          String?
+  score          LeadScore    @default(COLD)
+  status         LeadStatus   @default(NEW)
+  createdAt      DateTime     @default(now())
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+enum LeadScore {
+  HOT
+  WARM
+  COLD
+  SPAM
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  WON
+  LOST
+}
