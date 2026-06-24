@@ -41,7 +41,7 @@ export function Sidebar({
   const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-[#E5E7EB] bg-white lg:flex">
+    <aside className="sticky top-0 h-screen w-60 flex-shrink-0 flex-col border-r border-[#E5E7EB] bg-white hidden lg:flex overflow-y-auto">
       <div className="flex h-full flex-col px-4 py-6">
         <Link className="flex items-center gap-3 px-2 text-2xl font-bold text-[#7C3AED]" href="/dashboard">
           <Bot className="h-9 w-9" />
