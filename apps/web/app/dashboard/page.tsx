@@ -1,14 +1,16 @@
-import Link from "next/link";
+import { Calendar } from "lucide-react";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LeadsChart } from "@/components/dashboard/leads-chart";
+import { LiveConversations } from "@/components/dashboard/live-conversations";
+import { RecentLeads } from "@/components/dashboard/recent-leads";
+import { SourcesChart } from "@/components/dashboard/sources-chart";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { dashboardStats } from "@/lib/mock-data";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/projects", label: "Projects" },
-  { href: "/settings", label: "Settings" }
-];
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -23,93 +25,45 @@ export default async function DashboardPage() {
   const prisma = getSharedPrismaClient();
   const membership = await prisma.workspaceMember.findFirst({
     where: { userId: user.id },
-    include: {
-      workspace: {
-        select: {
-          id: true,
-          name: true
-        }
-      }
-    }
+    include: { workspace: { select: { name: true } }, user: { select: { name: true, email: true } } }
   });
 
   if (!membership) {
     redirect("/signup");
   }
 
-  const [totalProjects, totalConversations, totalLeads] = await Promise.all([
-    prisma.project.count({
-      where: {
-        workspaceId: membership.workspace.id
-      }
-    }),
-    prisma.conversation.count({
-      where: {
-        project: {
-          workspaceId: membership.workspace.id
-        }
-      }
-    }),
-    prisma.lead.count({
-      where: {
-        project: {
-          workspaceId: membership.workspace.id
-        }
-      }
-    })
-  ]);
+  const userName = membership.user.name ?? user.user_metadata.name ?? user.email?.split("@")[0] ?? "John";
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <div className="grid min-h-screen lg:grid-cols-[260px_1fr]">
-        <aside className="border-b border-slate-200 bg-white px-5 py-5 lg:border-b-0 lg:border-r">
-          <Link className="text-lg font-semibold text-slate-950" href="/dashboard">
-            LeadPilot AI
-          </Link>
-          <nav className="mt-8 grid gap-1">
-            {navItems.map((item) => (
-              <Link
-                className="rounded-md px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
-                href={item.href}
-                key={item.href}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </aside>
-
-        <section className="px-5 py-8 md:px-8">
-          <div className="mx-auto max-w-6xl">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-              <div>
-                <p className="text-sm font-medium text-slate-500">Workspace</p>
-                <h1 className="mt-1 text-3xl font-semibold text-slate-950">{membership.workspace.name}</h1>
-              </div>
-              <Link className="rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" href="/projects">
-                View projects
-              </Link>
-            </div>
-
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              {[
-                ["Total Projects", totalProjects],
-                ["Total Conversations", totalConversations],
-                ["Total Leads", totalLeads]
-              ].map(([label, value]) => (
-                <Card key={label}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-500">{label}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-semibold text-slate-950">{value}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+    <DashboardLayout userName={userName} workspaceName={membership.workspace.name}>
+      <div className="space-y-6">
+        <section className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-[#111827]">Good morning, {userName}! 👋</h1>
+            <p className="mt-2 text-[#6B7280]">Here's what's happening with your leads today.</p>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-4 py-3 text-sm font-medium text-[#374151] shadow-sm">
+            <Calendar className="h-4 w-4 text-[#6B7280]" />
+            May 12 - May 19, 2024
           </div>
         </section>
+
+        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          {dashboardStats.map((stat) => (
+            <StatCard change={stat.change} key={stat.label} label={stat.label} period={stat.period} value={stat.value} />
+          ))}
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
+          <LeadsChart />
+          <SourcesChart />
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
+          <RecentLeads />
+          <LiveConversations />
+        </section>
       </div>
-    </main>
+    </DashboardLayout>
   );
 }

@@ -18,5 +18,9 @@
   "devDependencies": {
     "turbo": "^2.0.14",
     "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "lucide-react": "^1.21.0",
+    "recharts": "^3.9.0"
   }
 }
