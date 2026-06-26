@@ -6,6 +6,4 @@ dist
 .env.local
 .env.example
 *.tsbuildinfo
-apps/web/nul
-nul
 coverage

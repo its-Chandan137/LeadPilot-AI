@@ -1,64 +1,38 @@
-import { Plus } from "lucide-react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { EmptyState } from "@/components/projects/empty-state";
-import { ProjectCard } from "@/components/projects/project-card";
-import { getSharedPrismaClient } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
+import { listProjects, toWidgetConfig } from "@/lib/widget-store";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login?next=/projects");
-  }
-
-  const prisma = getSharedPrismaClient();
-  const membership = await prisma.workspaceMember.findFirst({
-    where: { userId: user.id },
-    include: { workspace: { select: { name: true } }, user: { select: { name: true, email: true } } }
-  });
-
-  if (!membership) {
-    redirect("/signup");
-  }
-
-  const projects = await prisma.project.findMany({
-    where: { workspaceId: membership.workspaceId },
-    orderBy: { createdAt: "desc" },
-    select: { id: true, name: true, siteUrl: true, clientId: true, createdAt: true }
-  });
-
-  const userName = membership.user.name ?? user.email?.split("@")[0] ?? "Owner";
+  const projects = await listProjects();
 
   return (
-    <DashboardLayout userName={userName} workspaceName={membership.workspace.name}>
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+    <main className="mx-auto max-w-6xl px-6 py-10">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[#111827]">Projects</h1>
-          <p className="mt-2 text-[#6B7280]">Create and manage website widget installations.</p>
+          <h1 className="text-3xl font-semibold">Projects</h1>
+          <p className="mt-1 text-slate-600">Manage widget installs and project snippets.</p>
         </div>
-        <Link className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#7C3AED] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#5B21B6]" href="/projects/new">
-          <Plus className="h-4 w-4" />
-          New Project
-        </Link>
+        <Link className="rounded-md bg-slate-950 px-4 py-2 text-sm text-white" href="/projects/new">New project</Link>
       </div>
-
-      {projects.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <section className="mt-8 grid gap-5 lg:grid-cols-2">
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
-        </section>
-      )}
-    </DashboardLayout>
+      <div className="mt-8 overflow-hidden rounded-lg border bg-white">
+        {projects.map((project) => {
+          const config = toWidgetConfig(project);
+          return (
+            <div className="grid gap-4 border-b p-5 last:border-b-0 md:grid-cols-[1fr_auto]" key={project.id}>
+              <div>
+                <h2 className="font-semibold">{project.name}</h2>
+                <p className="mt-1 text-sm text-slate-600">Client ID: {project.clientId}</p>
+                <p className="mt-1 text-sm text-slate-600">Bot: {config.botName}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link className="rounded-md border px-3 py-2 text-sm" href={`/projects/${project.id}/widget`}>Customize</Link>
+                <Link className="rounded-md bg-blue-600 px-3 py-2 text-sm text-white" href={`/projects/${project.id}/snippet`}>Snippet</Link>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </main>
   );
 }
