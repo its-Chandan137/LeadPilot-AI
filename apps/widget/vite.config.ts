@@ -11,7 +11,7 @@ export default defineConfig({
     emptyOutDir: true,
     lib: {
       entry: "src/main.tsx",
-      name: "LeadPilotWidgetBundle",
+      name: "LeadPilotWidget",
       formats: ["iife"],
       fileName: () => "widget.js"
     },

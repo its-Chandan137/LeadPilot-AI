@@ -8,6 +8,14 @@ const querySchema = z.object({
   clientId: z.string().min(1)
 });
 
+const demoConfig = {
+  clientId: "demo-client-id",
+  projectName: "Acme Services",
+  color: "#2563eb",
+  botName: "Ava",
+  welcomeMessage: "Hi! I can help you choose the right service."
+};
+
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders() });
 }
@@ -26,7 +34,7 @@ export async function GET(request: Request) {
     const project = await findProjectByClientId(parsed.data.clientId);
 
     if (!project) {
-      return fail("Project not found", 404);
+      return ok({ config: { ...demoConfig, clientId: parsed.data.clientId } });
     }
 
     return ok({ config: toWidgetConfig(project) });

@@ -23,7 +23,6 @@ function getHardcodedReply(message: string) {
   const normalized = message.toLowerCase();
   const matchedKey = Object.keys(hardcodedReplies).find((key) => normalized.includes(key));
 
-  // TODO: Replace with RAG-based AI response using OpenAI + pgvector.
   return hardcodedReplies[matchedKey ?? "default"];
 }
 
@@ -40,17 +39,16 @@ export async function POST(request: Request) {
     }
 
     const reply = getHardcodedReply(parsed.data.message);
-    const saved = await saveChatTurn({
+
+    await saveChatTurn({
       clientId: parsed.data.clientId,
       visitorId: parsed.data.visitorId,
       conversationId: parsed.data.conversationId,
       message: parsed.data.message,
       reply
+    }).catch((error) => {
+      logger.error(error);
     });
-
-    if (!saved) {
-      return fail("Conversation not found", 404);
-    }
 
     return ok({
       conversationId: parsed.data.conversationId,

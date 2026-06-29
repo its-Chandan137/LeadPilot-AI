@@ -1,15 +1,39 @@
-const clientId = "demo-client-id";
+import { listProjects } from "@/lib/widget-store";
 
-const snippets = [
-  ["HTML", `<script async src="http://localhost:3000/widget.js" data-client-id="${clientId}" data-api-url="http://localhost:3000" data-widget-src="http://localhost:5174/widget.js"></script>`],
-  ["React", `useEffect(() => {\n  const script = document.createElement("script");\n  script.async = true;\n  script.src = "http://localhost:3000/widget.js";\n  script.dataset.clientId = "${clientId}";\n  script.dataset.apiUrl = "http://localhost:3000";\n  script.dataset.widgetSrc = "http://localhost:5174/widget.js";\n  document.body.appendChild(script);\n  return () => script.remove();\n}, []);`],
-  ["Angular", `ngOnInit() {\n  const script = document.createElement("script");\n  script.async = true;\n  script.src = "http://localhost:3000/widget.js";\n  script.dataset.clientId = "${clientId}";\n  script.dataset.apiUrl = "http://localhost:3000";\n  script.dataset.widgetSrc = "http://localhost:5174/widget.js";\n  document.body.appendChild(script);\n}`],
-  ["Vue", `onMounted(() => {\n  const script = document.createElement("script");\n  script.async = true;\n  script.src = "http://localhost:3000/widget.js";\n  script.dataset.clientId = "${clientId}";\n  script.dataset.apiUrl = "http://localhost:3000";\n  script.dataset.widgetSrc = "http://localhost:5174/widget.js";\n  document.body.appendChild(script);\n});`],
-  ["Next.js", `<Script async src="http://localhost:3000/widget.js" data-client-id="${clientId}" data-api-url="http://localhost:3000" data-widget-src="http://localhost:5174/widget.js" />`],
-  ["Google Tag Manager", `Create a Custom HTML tag with the HTML snippet, trigger it on All Pages, then publish the container.`]
-];
+export default async function SnippetPage({ params }: { params: { id: string } }) {
+  const projects = await listProjects();
+  const project = projects.find((p) => p.id === params.id || p.clientId === params.id);
 
-export default function SnippetPage() {
+  const clientId = project?.clientId ?? "demo-client-id";
+  const apiUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://leadpilot-ai-beryl.vercel.app";
+
+  const snippets = [
+    [
+      "HTML",
+      `<script\n  async\n  src="${apiUrl}/widget.js"\n  data-client-id="${clientId}"\n  data-api-url="${apiUrl}"\n  data-widget-src="${apiUrl}/widget-dist/widget.js"\n></script>`
+    ],
+    [
+      "React",
+      `useEffect(() => {\n  const s = document.createElement('script')\n  s.src = '${apiUrl}/widget.js'\n  s.async = true\n  s.dataset.clientId = '${clientId}'\n  s.dataset.apiUrl = '${apiUrl}'\n  s.dataset.widgetSrc = '${apiUrl}/widget-dist/widget.js'\n  document.body.appendChild(s)\n  return () => document.body.removeChild(s)\n}, [])`
+    ],
+    [
+      "Angular",
+      `ngOnInit() {\n  const s = document.createElement('script')\n  s.src = '${apiUrl}/widget.js'\n  s.async = true\n  s.dataset.clientId = '${clientId}'\n  s.dataset.apiUrl = '${apiUrl}'\n  s.dataset.widgetSrc = '${apiUrl}/widget-dist/widget.js'\n  document.body.appendChild(s)\n}`
+    ],
+    [
+      "Vue",
+      `onMounted(() => {\n  const s = document.createElement('script')\n  s.src = '${apiUrl}/widget.js'\n  s.async = true\n  s.dataset.clientId = '${clientId}'\n  s.dataset.apiUrl = '${apiUrl}'\n  s.dataset.widgetSrc = '${apiUrl}/widget-dist/widget.js'\n  document.body.appendChild(s)\n})`
+    ],
+    [
+      "Next.js",
+      `<Script\n  async\n  src="${apiUrl}/widget.js"\n  data-client-id="${clientId}"\n  data-api-url="${apiUrl}"\n  data-widget-src="${apiUrl}/widget-dist/widget.js"\n/>`
+    ],
+    [
+      "Google Tag Manager",
+      `Create a Custom HTML tag with the HTML snippet, trigger it on All Pages, then publish the container.`
+    ]
+  ];
+
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
       <h1 className="text-3xl font-semibold">Install widget</h1>

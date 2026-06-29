@@ -1,10 +1,9 @@
 <!doctype html>
-<!-- Replace CLIENT_ID with your project's clientId. Local Phase 1 demo uses demo-client-id. -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Acme Services</title>
+    <title>LeadPilot Test Site</title>
     <style>
       body {
         margin: 0;
@@ -123,12 +122,24 @@
 
     <footer id="contact">Contact Acme Services at hello@example.com</footer>
 
+    <!-- Local dev snippet -->
     <script
       async
-      src="../public-cdn/widget.js"
+      src="http://localhost:3000/widget.js"
       data-client-id="demo-client-id"
       data-api-url="http://localhost:3000"
-      data-widget-src="../apps/widget/dist/widget.js">
+      data-widget-src="http://localhost:3000/widget-dist/widget.js">
     </script>
+
+    <!--
+    PRODUCTION:
+    <script
+      async
+      src="https://leadpilot-ai-beryl.vercel.app/widget.js"
+      data-client-id="YOUR_CLIENT_ID"
+      data-api-url="https://leadpilot-ai-beryl.vercel.app"
+      data-widget-src="https://leadpilot-ai-beryl.vercel.app/widget-dist/widget.js">
+    </script>
+    -->
   </body>
 </html>

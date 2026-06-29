@@ -170,6 +170,42 @@ export async function saveChatTurn(input: {
   return true;
 }
 
+export async function createProject(input: {
+  workspaceId: string;
+  name: string;
+  siteUrl: string;
+  widgetConfig?: WidgetConfigJson;
+}): Promise<StoredProject | null> {
+  const prisma = getPrisma();
+
+  if (!prisma) {
+    return {
+      id: `local-${crypto.randomUUID()}`,
+      name: input.name,
+      clientId: `local-client-${crypto.randomUUID()}`,
+      widgetConfig: input.widgetConfig ?? {}
+    };
+  }
+
+  const project = await prisma.project.create({
+    data: {
+      workspaceId: input.workspaceId,
+      name: input.name,
+      siteUrl: input.siteUrl,
+      clientId: crypto.randomUUID(),
+      widgetConfig: input.widgetConfig ?? {}
+    },
+    select: {
+      id: true,
+      name: true,
+      clientId: true,
+      widgetConfig: true
+    }
+  });
+
+  return project;
+}
+
 export async function listProjects() {
   const prisma = getPrisma();
 

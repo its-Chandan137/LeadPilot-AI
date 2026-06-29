@@ -28,11 +28,20 @@ const roots = new WeakMap<ShadowRoot | HTMLElement, Root>();
 
 declare global {
   interface Window {
+    __LEADPILOT_CONFIG__?: {
+      clientId: string;
+      apiUrl: string;
+    };
     LeadPilotWidget?: {
       mount(options: MountOptions): void;
     };
   }
 }
+
+const FALLBACK_CONFIG = {
+  clientId: "demo-client-id",
+  apiUrl: window?.location?.origin ?? "http://localhost:3000"
+};
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { hasError: false };
@@ -247,17 +256,43 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
   );
 }
 
-window.LeadPilotWidget = {
-  mount(options: MountOptions) {
-    const existingRoot = roots.get(options.root);
-    existingRoot?.unmount();
+function mountToRoot(options: MountOptions) {
+  console.log("[LeadPilot Widget] Mounting...");
+  console.log("[LeadPilot Widget] Config received:", { clientId: options.clientId, apiUrl: options.apiUrl });
 
-    const root = createRoot(options.root);
-    roots.set(options.root, root);
-    root.render(
-      <ErrorBoundary>
-        <Widget apiUrl={options.apiUrl.replace(/\/$/, "")} clientId={options.clientId} />
-      </ErrorBoundary>
-    );
-  }
+  const existingRoot = roots.get(options.root);
+  existingRoot?.unmount();
+
+  const root = createRoot(options.root);
+  roots.set(options.root, root);
+  root.render(
+    <ErrorBoundary>
+      <Widget apiUrl={options.apiUrl.replace(/\/$/, "")} clientId={options.clientId} />
+    </ErrorBoundary>
+  );
+
+  console.log("[LeadPilot Widget] Mounted successfully");
+}
+
+window.LeadPilotWidget = {
+  mount: mountToRoot
 };
+
+if (typeof document !== "undefined") {
+  const cfg = window.__LEADPILOT_CONFIG__;
+  const clientId = cfg?.clientId ?? FALLBACK_CONFIG.clientId;
+  const apiUrl = (cfg?.apiUrl ?? FALLBACK_CONFIG.apiUrl).replace(/\/$/, "");
+
+  console.log("[LeadPilot Widget] Auto-mounting from __LEADPILOT_CONFIG__");
+
+  const container = document.getElementById("leadpilot-widget-container") ?? document.createElement("div");
+  container.id = "leadpilot-widget-container";
+
+  if (!container.parentNode) {
+    document.body.appendChild(container);
+  }
+
+  const shadow = container.shadowRoot ?? container.attachShadow({ mode: "open" });
+
+  mountToRoot({ root: shadow, clientId, apiUrl });
+}

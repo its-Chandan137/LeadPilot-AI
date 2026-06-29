@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const conversationId = await createConversation(parsed.data.clientId, parsed.data.visitorId);
 
     if (!conversationId) {
-      return fail("Project not found", 404);
+      return ok({ conversationId: `demo-conv-${crypto.randomUUID()}` });
     }
 
     return ok({ conversationId });
