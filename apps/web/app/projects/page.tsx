@@ -1,13 +1,35 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { listProjects, toWidgetConfig } from "@/lib/widget-store";
+import { getSharedPrismaClient } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const prisma = getSharedPrismaClient();
+  const membership = await prisma.workspaceMember.findFirst({
+    where: { userId: user.id },
+    include: { workspace: true }
+  });
+
   const projects = await listProjects();
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
+    <DashboardLayout
+      workspaceName={membership?.workspace.name ?? "My Workspace"}
+      userName={user.user_metadata?.name ?? user.email ?? "User"}
+    >
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold">Projects</h1>
@@ -33,6 +55,6 @@ export default async function ProjectsPage() {
           );
         })}
       </div>
-    </main>
+    </DashboardLayout>
   );
 }

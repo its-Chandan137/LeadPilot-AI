@@ -1,6 +1,19 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect("/dashboard");
+  }
+
   return (
     <main className="min-h-screen bg-white">
       <section className="mx-auto grid min-h-[92vh] max-w-6xl content-center gap-10 px-6 py-16 md:grid-cols-[1.1fr_0.9fr] md:items-center">
@@ -14,9 +27,9 @@ export default function HomePage() {
             hardcoded replies, and stored conversations.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link className="inline-flex items-center justify-center rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" href="/projects">View projects</Link>
-            <Link className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium" href="/projects/demo/snippet">
-              Install widget
+            <Link className="inline-flex items-center justify-center rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" href="/signup">Get Started</Link>
+            <Link className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium" href="/login">
+              Login
             </Link>
           </div>
         </div>
