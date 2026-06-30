@@ -36,17 +36,19 @@ model WorkspaceMember {
 }
 
 model Project {
-  id            String         @id @default(cuid())
+  id            String             @id @default(cuid())
   workspaceId   String
   name          String
   siteUrl       String
-  clientId      String         @unique @default(cuid())
-  widgetConfig  Json           @default("{}")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  clientId      String             @unique @default(cuid())
+  widgetConfig  Json               @default("{}")
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  workspace     Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   conversations Conversation[]
   leads         Lead[]
+  sources       KnowledgeSource[]
+  chunks        KnowledgeChunk[]
 }
 
 model Conversation {
@@ -107,4 +109,41 @@ enum LeadStatus {
   QUALIFIED
   WON
   LOST
+}
+
+model KnowledgeSource {
+  id        String        @id @default(cuid())
+  projectId String
+  type      SourceType
+  name      String
+  content   String        @db.Text
+  status    SourceStatus  @default(PROCESSING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chunks    KnowledgeChunk[]
+}
+
+model KnowledgeChunk {
+  id        String          @id @default(cuid())
+  projectId String
+  sourceId  String
+  content   String          @db.Text
+  embedding Unsupported("vector(3072)")?
+  metadata  Json            @default("{}")
+  createdAt DateTime        @default(now())
+  project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  source    KnowledgeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+}
+
+enum SourceType {
+  TEXT
+  DOCUMENT
+  URL
+}
+
+enum SourceStatus {
+  PROCESSING
+  READY
+  FAILED
 }

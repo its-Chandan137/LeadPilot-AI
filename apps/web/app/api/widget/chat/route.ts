@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import Groq from "groq-sdk";
 import { corsHeaders, fail, ok } from "@/lib/api-response";
-import { saveChatTurn } from "@/lib/widget-store";
+import { findProjectByClientId, saveChatTurn } from "@/lib/widget-store";
+import { getSharedPrismaClient } from "@/lib/prisma";
+import { retrieveRelevantChunks } from "@/lib/retrieval";
 import { logger } from "@/lib/logger";
 
 const bodySchema = z.object({
@@ -22,8 +25,37 @@ const hardcodedReplies: Record<string, string> = {
 function getHardcodedReply(message: string) {
   const normalized = message.toLowerCase();
   const matchedKey = Object.keys(hardcodedReplies).find((key) => normalized.includes(key));
-
   return hardcodedReplies[matchedKey ?? "default"];
+}
+
+async function getRagReply(projectId: string, projectName: string, message: string): Promise<string> {
+  const chunks = await retrieveRelevantChunks(projectId, message);
+
+  if (chunks.length === 0) {
+    return getHardcodedReply(message);
+  }
+
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+  const systemPrompt = `You are a helpful AI assistant for ${projectName}. 
+Answer questions based ONLY on the following context. 
+If the answer is not in the context, say you don't have that information 
+but offer to connect them with the team.
+
+Context:
+${chunks.join("\n\n")}`;
+
+  const completion = await groq.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: message }
+    ],
+    max_tokens: 500,
+    temperature: 0.3
+  });
+
+  return completion.choices[0]?.message?.content ?? "I could not generate a response.";
 }
 
 export async function OPTIONS() {
@@ -38,7 +70,31 @@ export async function POST(request: Request) {
       return fail("Invalid chat payload");
     }
 
-    const reply = getHardcodedReply(parsed.data.message);
+    const { clientId, message } = parsed.data;
+
+    const project = await findProjectByClientId(clientId);
+
+    let reply: string;
+
+    if (project) {
+      try {
+        const prisma = getSharedPrismaClient();
+        const chunkCount = await prisma.knowledgeChunk.count({
+          where: { projectId: project.id }
+        });
+
+        if (chunkCount > 0) {
+          reply = await getRagReply(project.id, project.name, message);
+        } else {
+          reply = getHardcodedReply(message);
+        }
+      } catch (error) {
+        logger.error(error);
+        reply = getHardcodedReply(message);
+      }
+    } else {
+      reply = getHardcodedReply(message);
+    }
 
     await saveChatTurn({
       clientId: parsed.data.clientId,

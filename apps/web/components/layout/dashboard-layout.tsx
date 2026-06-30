@@ -16,6 +16,7 @@ import {
   Bell,
   LogOut,
   Shield,
+  BookOpen,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
   { href: "/leads", label: "Leads", icon: Users },
+  { href: "/knowledge", label: "Knowledge Base", icon: BookOpen },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/widget-settings", label: "Widget Settings", icon: Settings2 },
   { href: "/integrations", label: "Integrations", icon: Plug },
@@ -36,6 +38,7 @@ const pageTitles: Record<string, string> = {
   "/projects": "Projects",
   "/conversations": "Conversations",
   "/leads": "Leads",
+  "/knowledge": "Knowledge Base",
   "/analytics": "Analytics",
   "/widget-settings": "Widget Settings",
   "/integrations": "Integrations",
