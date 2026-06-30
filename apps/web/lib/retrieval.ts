@@ -6,19 +6,24 @@ export async function retrieveRelevantChunks(
   query: string,
   limit = 5
 ): Promise<string[]> {
-  const prisma = getSharedPrismaClient();
-  const queryEmbedding = await generateEmbedding(query);
+  try {
+    const prisma = getSharedPrismaClient();
+    const queryEmbedding = await generateEmbedding(query);
+    const vectorString = `[${queryEmbedding.join(",")}]`;
 
-  const results = await prisma.$queryRawUnsafe<{ content: string }[]>(
-    `SELECT content
-     FROM "KnowledgeChunk"
-     WHERE "projectId" = $1
-     ORDER BY embedding <=> $2::vector
-     LIMIT $3`,
-    projectId,
-    JSON.stringify(queryEmbedding),
-    limit
-  );
+    const results = await prisma.$queryRawUnsafe<{ content: string }[]>(
+      `SELECT content
+       FROM "KnowledgeChunk"
+       WHERE "projectId" = $1
+       ORDER BY embedding <=> $2::vector
+       LIMIT $3`,
+      projectId,
+      vectorString,
+      limit
+    );
 
-  return results.map(r => r.content);
+    return results.map((r) => r.content);
+  } catch {
+    return [];
+  }
 }

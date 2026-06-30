@@ -37,13 +37,10 @@ async function getRagReply(projectId: string, projectName: string, message: stri
 
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-  const systemPrompt = `You are a helpful AI assistant for ${projectName}. 
-Answer questions based ONLY on the following context. 
-If the answer is not in the context, say you don't have that information 
-but offer to connect them with the team.
+  const systemPrompt = `You are a helpful AI assistant for ${projectName}. Answer questions based ONLY on the following context. If the answer is not in the context, say you don't have that information but offer to connect them with the team. Keep answers concise and friendly.
 
 Context:
-${chunks.join("\n\n")}`;
+${chunks.join("\n\n---\n\n")}`;
 
   const completion = await groq.chat.completions.create({
     model: "llama-3.3-70b-versatile",
