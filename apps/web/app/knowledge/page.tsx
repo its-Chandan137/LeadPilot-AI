@@ -25,7 +25,7 @@ export default async function KnowledgePage() {
 
   const projects = await prisma.project.findMany({
     where: { workspaceId: membership.workspaceId },
-    select: { id: true, name: true }
+    select: { id: true, name: true, clientId: true }
   });
 
   return (
