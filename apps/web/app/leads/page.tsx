@@ -1,86 +1,62 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
-import { mockLeads } from "@/lib/mock-data";
+import { LeadsClient } from "./leads-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeadsPage() {
   const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   const prisma = getSharedPrismaClient();
   const membership = await prisma.workspaceMember.findFirst({
     where: { userId: user.id },
-    include: { workspace: true }
+    include: { workspace: { select: { id: true, name: true } } },
+  });
+  if (!membership) redirect("/login");
+
+  const projects = await prisma.project.findMany({
+    where: { workspaceId: membership.workspace.id },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
   });
 
   return (
     <DashboardLayout
-      workspaceName={membership?.workspace.name ?? "My Workspace"}
-      userName={user.user_metadata?.name ?? user.email ?? "User"}
+      workspaceName={membership.workspace.name}
+      userName={user.email ?? "User"}
     >
-      <h1 className="text-3xl font-semibold">Leads</h1>
-      <p className="mt-1 text-slate-600">Track and manage your leads.</p>
-
-      {mockLeads.length === 0 ? (
-        <div className="mt-8 rounded-lg border bg-white p-12 text-center">
-          <p className="text-slate-500">No leads yet. Leads will appear here as visitors engage with your widget.</p>
-        </div>
-      ) : (
-        <div className="mt-8 overflow-hidden rounded-lg border bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-slate-50">
-              <tr>
-                <th className="px-5 py-3 font-medium text-slate-600">Name</th>
-                <th className="px-5 py-3 font-medium text-slate-600">Email</th>
-                <th className="px-5 py-3 font-medium text-slate-600">Phone</th>
-                <th className="px-5 py-3 font-medium text-slate-600">Source</th>
-                <th className="px-5 py-3 font-medium text-slate-600">Score</th>
-                <th className="px-5 py-3 font-medium text-slate-600">Status</th>
-                <th className="px-5 py-3 font-medium text-slate-600">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockLeads.map((lead) => (
-                <tr className="border-b last:border-b-0" key={lead.id}>
-                  <td className="px-5 py-3 font-medium text-slate-950">{lead.name}</td>
-                  <td className="px-5 py-3 text-slate-600">{lead.email}</td>
-                  <td className="px-5 py-3 text-slate-600">{lead.phone}</td>
-                  <td className="px-5 py-3 text-slate-600">{lead.source}</td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      lead.score === "Hot" ? "bg-red-100 text-red-700" :
-                      lead.score === "Warm" ? "bg-yellow-100 text-yellow-700" :
-                      "bg-gray-100 text-gray-700"
-                    }`}>
-                      {lead.score}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      lead.status === "New" ? "bg-blue-100 text-blue-700" :
-                      lead.status === "Contacted" ? "bg-gray-100 text-gray-700" :
-                      lead.status === "Qualified" ? "bg-green-100 text-green-700" :
-                      "bg-green-200 text-green-800"
-                    }`}>
-                      {lead.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-slate-600">{lead.date}</td>
-                </tr>
+      <Suspense fallback={
+        <div className="flex h-[calc(100vh-8rem)] -mx-8 -mb-6">
+          <div className="w-[380px] border-r border-[#E5E7EB] bg-white">
+            <div className="p-4 border-b space-y-3">
+              <div className="h-9 bg-[#F3F4F6] rounded animate-pulse" />
+              <div className="flex gap-2">
+                <div className="flex-1 h-9 bg-[#F3F4F6] rounded animate-pulse" />
+                <div className="flex-1 h-9 bg-[#F3F4F6] rounded animate-pulse" />
+              </div>
+            </div>
+            <div className="p-4 space-y-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="animate-pulse space-y-2">
+                  <div className="h-4 bg-[#F3F4F6] rounded w-3/4" />
+                  <div className="h-3 bg-[#F3F4F6] rounded w-1/2" />
+                  <div className="h-3 bg-[#F3F4F6] rounded w-full" />
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
+          <div className="flex-1 bg-[#F5F3FF] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full border-4 border-[#EDE9FE] border-t-[#7C3AED] animate-spin" />
+          </div>
         </div>
-      )}
+      }>
+        <LeadsClient projects={projects} />
+      </Suspense>
     </DashboardLayout>
   );
 }
