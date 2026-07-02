@@ -108,12 +108,10 @@ export async function POST(request: Request) {
       const leadData = extractLeadInfo(parsed.data.message);
       if (hasLeadData(leadData)) {
         const prisma = getSharedPrismaClient();
-        const existing = await prisma.lead.findUnique({
+        const existing = await prisma.lead.findFirst({
           where: {
-            projectId_visitorId: {
-              projectId: project.id,
-              visitorId: parsed.data.visitorId,
-            },
+            projectId: project.id,
+            visitorId: parsed.data.visitorId,
           },
           select: { id: true, name: true, email: true, phone: true },
         });
