@@ -6,6 +6,7 @@ import { findProjectByClientId, saveChatTurn } from "@/lib/widget-store";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { retrieveRelevantChunks } from "@/lib/retrieval";
 import { logger } from "@/lib/logger";
+import { extractLeadInfo, hasLeadData } from "@/lib/lead-extractor";
 
 const bodySchema = z.object({
   clientId: z.string().min(1),
@@ -102,6 +103,46 @@ export async function POST(request: Request) {
     }).catch((error) => {
       logger.error(error);
     });
+
+    if (project) {
+      const leadData = extractLeadInfo(parsed.data.message);
+      if (hasLeadData(leadData)) {
+        const prisma = getSharedPrismaClient();
+        const existing = await prisma.lead.findUnique({
+          where: {
+            projectId_visitorId: {
+              projectId: project.id,
+              visitorId: parsed.data.visitorId,
+            },
+          },
+          select: { id: true, name: true, email: true, phone: true },
+        });
+
+        if (existing) {
+          await prisma.lead.update({
+            where: { id: existing.id },
+            data: {
+              ...(leadData.name && !existing.name && { name: leadData.name }),
+              ...(leadData.email && !existing.email && { email: leadData.email }),
+              ...(leadData.phone && !existing.phone && { phone: leadData.phone }),
+            },
+          });
+        } else {
+          await prisma.lead.create({
+            data: {
+              projectId: project.id,
+              visitorId: parsed.data.visitorId,
+              conversationId: parsed.data.conversationId,
+              name: leadData.name ?? null,
+              email: leadData.email ?? null,
+              phone: leadData.phone ?? null,
+              status: "NEW",
+              source: "CHAT",
+            },
+          });
+        }
+      }
+    }
 
     return ok({
       conversationId: parsed.data.conversationId,

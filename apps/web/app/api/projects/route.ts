@@ -48,6 +48,13 @@ export async function POST(request: Request) {
 
     if (!workspaceId) {
       const name = typeof user.user_metadata.name === "string" ? user.user_metadata.name : user.email?.split("@")[0] ?? "LeadPilot";
+
+      await prisma.user.upsert({
+        where: { id: user.id },
+        update: { email: user.email ?? "", name },
+        create: { id: user.id, email: user.email ?? "", name }
+      });
+
       const workspace = await prisma.workspace.create({
         data: {
           name: `${name}'s Workspace`,
