@@ -7,6 +7,7 @@ import { getSharedPrismaClient } from "@/lib/prisma";
 import { retrieveRelevantChunks } from "@/lib/retrieval";
 import { logger } from "@/lib/logger";
 import { extractLeadInfo, hasLeadData } from "@/lib/lead-extractor";
+import { Prisma } from "@prisma/client";
 
 const bodySchema = z.object({
   clientId: z.string().min(1),
@@ -123,18 +124,17 @@ export async function POST(request: Request) {
             },
           });
         } else {
-          await prisma.lead.create({
-            data: {
-              projectId: project.id,
-              visitorId: parsed.data.visitorId,
-              conversationId: parsed.data.conversationId,
-              name: leadData.name ?? null,
-              email: leadData.email ?? null,
-              phone: leadData.phone ?? null,
-              status: "NEW",
-              source: "CHAT",
-            },
-          });
+          const createData: Prisma.LeadUncheckedCreateInput = {
+            projectId: project.id,
+            visitorId: parsed.data.visitorId,
+            conversationId: parsed.data.conversationId,
+            name: leadData.name ?? null,
+            email: leadData.email ?? null,
+            phone: leadData.phone ?? null,
+            status: "NEW",
+            source: "CHAT",
+          };
+          await prisma.lead.create({ data: createData });
         }
       }
     }
