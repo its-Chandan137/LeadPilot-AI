@@ -1,5 +1,6 @@
 import { getSharedPrismaClient } from "./prisma";
 import { generateEmbedding } from "./embeddings";
+import { logger } from "./logger";
 
 export async function retrieveRelevantChunks(
   projectId: string,
@@ -23,7 +24,8 @@ export async function retrieveRelevantChunks(
     );
 
     return results.map((r) => r.content);
-  } catch {
+  } catch (error) {
+    logger.error(error);
     return [];
   }
 }

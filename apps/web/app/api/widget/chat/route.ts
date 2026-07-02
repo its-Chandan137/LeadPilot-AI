@@ -33,7 +33,7 @@ async function getRagReply(projectId: string, projectName: string, message: stri
   const chunks = await retrieveRelevantChunks(projectId, message);
 
   if (chunks.length === 0) {
-    return getHardcodedReply(message);
+    return "Sorry, I don't have access to your site information yet. Add content to your Knowledge Base to enable AI responses.";
   }
 
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
         if (chunkCount > 0) {
           reply = await getRagReply(project.id, project.name, message);
         } else {
-          reply = getHardcodedReply(message);
+          reply = "Sorry, I don't have access to your site information yet. Add content to your Knowledge Base to enable AI responses.";
         }
       } catch (error) {
         logger.error(error);
