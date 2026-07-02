@@ -71,12 +71,10 @@ export async function GET(
       return fail("Conversation not found.", 404);
     }
 
-    const lead = await prisma.lead.findUnique({
+    const lead = await prisma.lead.findFirst({
       where: {
-        projectId_visitorId: {
-          projectId: conversation.projectId,
-          visitorId: conversation.visitorId
-        }
+        projectId: conversation.projectId,
+        visitorId: conversation.visitorId
       }
     });
 
