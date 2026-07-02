@@ -7,7 +7,6 @@ import { getSharedPrismaClient } from "@/lib/prisma";
 import { retrieveRelevantChunks } from "@/lib/retrieval";
 import { logger } from "@/lib/logger";
 import { extractLeadInfo, hasLeadData } from "@/lib/lead-extractor";
-import { Prisma } from "@prisma/client";
 
 const bodySchema = z.object({
   clientId: z.string().min(1),
@@ -108,33 +107,38 @@ export async function POST(request: Request) {
     if (project) {
       const leadData = extractLeadInfo(parsed.data.message);
       if (hasLeadData(leadData)) {
+        // Raw SQL bypasses Prisma's generated input types entirely
         const prisma = getSharedPrismaClient();
-        const existing = await prisma.lead.findFirst({
-          where: { conversationId: parsed.data.conversationId },
-          select: { id: true, name: true, email: true, phone: true },
-        });
+        const rows = await prisma.$queryRaw<{ id: string; name: string | null; email: string | null; phone: string | null }[]>`
+          SELECT id, name, email, phone FROM "Lead"
+          WHERE "conversationId" = ${parsed.data.conversationId}
+          LIMIT 1
+        `;
+        const existing = rows[0] ?? null;
 
         if (existing) {
-          await prisma.lead.update({
-            where: { id: existing.id },
-            data: {
-              ...(leadData.name && !existing.name && { name: leadData.name }),
-              ...(leadData.email && !existing.email && { email: leadData.email }),
-              ...(leadData.phone && !existing.phone && { phone: leadData.phone }),
-            },
-          });
+          const updates: string[] = [];
+          const values: unknown[] = [];
+          if (leadData.name && !existing.name)   { updates.push(`name = $${updates.length + 1}`);  values.push(leadData.name); }
+          if (leadData.email && !existing.email) { updates.push(`email = $${updates.length + 1}`); values.push(leadData.email); }
+          if (leadData.phone && !existing.phone) { updates.push(`phone = $${updates.length + 1}`); values.push(leadData.phone); }
+          if (updates.length > 0) {
+            values.push(existing.id);
+            await prisma.$executeRawUnsafe(
+              `UPDATE "Lead" SET ${updates.join(", ")} WHERE id = $${values.length}`,
+              ...values
+            );
+          }
         } else {
-          const createData: Prisma.LeadUncheckedCreateInput = {
-            projectId: project.id,
-            visitorId: parsed.data.visitorId,
-            conversationId: parsed.data.conversationId,
-            name: leadData.name ?? null,
-            email: leadData.email ?? null,
-            phone: leadData.phone ?? null,
-            status: "NEW",
-            source: "CHAT",
-          };
-          await prisma.lead.create({ data: createData });
+          await prisma.$executeRaw`
+            INSERT INTO "Lead" (id, "projectId", "visitorId", "conversationId", name, email, phone, score, status, source, "createdAt", "updatedAt")
+            VALUES (
+              gen_random_uuid(), ${project.id}, ${parsed.data.visitorId}, ${parsed.data.conversationId},
+              ${leadData.name ?? null}, ${leadData.email ?? null}, ${leadData.phone ?? null},
+              'COLD', 'NEW', 'CHAT', NOW(), NOW()
+            )
+            ON CONFLICT ("projectId", "visitorId") DO NOTHING
+          `;
         }
       }
     }
