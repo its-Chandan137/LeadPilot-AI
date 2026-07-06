@@ -107,37 +107,36 @@ export async function POST(request: Request) {
     if (project) {
       const leadData = extractLeadInfo(parsed.data.message);
       if (hasLeadData(leadData)) {
-        // Raw SQL bypasses Prisma's generated input types entirely
         const prisma = getSharedPrismaClient();
-        const rows = await prisma.$queryRaw<{ id: string; name: string | null; email: string | null; phone: string | null }[]>`
+
+        const existing = await prisma.$queryRaw<{ id: string; name: string | null; email: string | null; phone: string | null }[]>`
           SELECT id, name, email, phone FROM "Lead"
-          WHERE "conversationId" = ${parsed.data.conversationId}
+          WHERE "projectId" = ${project.id} AND "visitorId" = ${parsed.data.visitorId}
           LIMIT 1
         `;
-        const existing = rows[0] ?? null;
+        const lead = existing[0] ?? null;
 
-        if (existing) {
+        if (lead) {
           const updates: string[] = [];
           const values: unknown[] = [];
-          if (leadData.name && !existing.name)   { updates.push(`name = $${updates.length + 1}`);  values.push(leadData.name); }
-          if (leadData.email && !existing.email) { updates.push(`email = $${updates.length + 1}`); values.push(leadData.email); }
-          if (leadData.phone && !existing.phone) { updates.push(`phone = $${updates.length + 1}`); values.push(leadData.phone); }
-          if (updates.length > 0) {
-            values.push(existing.id);
-            await prisma.$executeRawUnsafe(
-              `UPDATE "Lead" SET ${updates.join(", ")} WHERE id = $${values.length}`,
-              ...values
-            );
-          }
+          if (leadData.name)   { updates.push(`name = $${updates.length + 1}`);  values.push(leadData.name); }
+          if (leadData.email)  { updates.push(`email = $${updates.length + 1}`); values.push(leadData.email); }
+          if (leadData.phone)  { updates.push(`phone = $${updates.length + 1}`); values.push(leadData.phone); }
+          updates.push(`"conversationId" = $${updates.length + 1}`); values.push(parsed.data.conversationId);
+          updates.push(`"updatedAt" = NOW()`);
+          values.push(lead.id);
+          await prisma.$executeRawUnsafe(
+            `UPDATE "Lead" SET ${updates.join(", ")} WHERE id = $${values.length}`,
+            ...values
+          );
         } else {
-          await prisma.$executeRaw`
+          await prisma.$queryRaw`
             INSERT INTO "Lead" (id, "projectId", "visitorId", "conversationId", name, email, phone, score, status, source, "createdAt", "updatedAt")
             VALUES (
               gen_random_uuid(), ${project.id}, ${parsed.data.visitorId}, ${parsed.data.conversationId},
               ${leadData.name ?? null}, ${leadData.email ?? null}, ${leadData.phone ?? null},
               'COLD', 'NEW', 'CHAT', NOW(), NOW()
             )
-            ON CONFLICT ("projectId", "visitorId") DO NOTHING
           `;
         }
       }

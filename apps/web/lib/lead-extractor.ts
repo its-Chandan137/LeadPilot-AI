@@ -6,13 +6,15 @@ export type ExtractedLead = {
 
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 
-const PHONE_REGEX = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}/;
+const PHONE_REGEX = /\+?[\d\s()-]{7,15}/;
 
 const NAME_PATTERNS = [
   /my name is ([A-Z][a-z]+(?: [A-Z][a-z]+)*)/i,
   /i'?m ([A-Z][a-z]+(?: [A-Z][a-z]+)*)/i,
   /this is ([A-Z][a-z]+(?: [A-Z][a-z]+)*)/i,
   /i am ([A-Z][a-z]+(?: [A-Z][a-z]+)*)/i,
+  /myself ([A-Z][a-z]+(?: [A-Z][a-z]+)*)/i,
+  /call me ([A-Z][a-z]+(?: [A-Z][a-z]+)*)/i,
 ];
 
 function extractEmail(text: string): string | undefined {

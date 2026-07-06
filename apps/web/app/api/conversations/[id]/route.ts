@@ -73,8 +73,7 @@ export async function GET(
 
     const lead = await prisma.lead.findFirst({
       where: {
-        projectId: conversation.projectId,
-        visitorId: conversation.visitorId
+        conversationId: conversation.id
       }
     });
 

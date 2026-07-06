@@ -6,7 +6,7 @@ import { getSharedPrismaClient } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 
 const paramsSchema = z.object({
-  id: z.string().cuid(),
+  id: z.string().min(1),
 });
 
 const patchSchema = z.object({
