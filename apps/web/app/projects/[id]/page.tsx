@@ -19,7 +19,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const prisma = getSharedPrismaClient();
   const membership = await prisma.workspaceMember.findFirst({
     where: { userId: user.id },
-    include: { workspace: true }
+    include: { workspace: { select: { id: true, name: true } } }
   });
 
   const project = await prisma.project.findUnique({
@@ -27,25 +27,25 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     select: { id: true, name: true, clientId: true }
   });
 
-  if (!project) {
+  if (!project || !membership) {
     redirect("/projects");
   }
 
   return (
     <DashboardLayout
-      workspaceName={membership?.workspace.name ?? "My Workspace"}
+      workspaceName={membership.workspace.name}
       userName={user.user_metadata?.name ?? user.email ?? "User"}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold">{project.name}</h1>
-          <p className="mt-1 text-slate-600">Client ID: <code className="rounded bg-slate-100 px-1.5 py-0.5 text-sm">{project.clientId}</code></p>
+      <div>
+        <h1 className="text-3xl font-semibold text-slate-900">{project.name}</h1>
+        <p className="mt-1 text-slate-600">Client ID: <code className="rounded bg-slate-100 px-1.5 py-0.5 text-sm">{project.clientId}</code></p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link className="rounded-md bg-violet-600 px-4 py-2 text-sm text-white hover:bg-violet-700 transition-colors" href={`/projects/${project.id}/widget`}>Customize</Link>
+          <Link className="rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:border-violet-400 hover:text-violet-600 transition-colors" href={`/projects/${project.id}/snippet`}>Snippet</Link>
+          <Link className="rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:border-violet-400 hover:text-violet-600 transition-colors flex items-center gap-1.5" href={`/projects/${project.id}/settings`}>
+            <span>Settings</span>
+          </Link>
         </div>
-        <Link className="rounded-md border px-4 py-2 text-sm" href="/projects">Back to Projects</Link>
-      </div>
-      <div className="mt-8 flex flex-wrap gap-3">
-        <Link className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white" href={`/projects/${project.id}/snippet`}>View Snippet</Link>
-        <Link className="rounded-md border px-4 py-2 text-sm" href="/projects">Back to Projects</Link>
       </div>
     </DashboardLayout>
   );

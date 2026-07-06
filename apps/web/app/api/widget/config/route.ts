@@ -13,7 +13,8 @@ const demoConfig = {
   projectName: "Acme Services",
   color: "#2563eb",
   botName: "Ava",
-  welcomeMessage: "Hi! I can help you choose the right service."
+  welcomeMessage: "Hi! I can help you choose the right service.",
+  mode: "chat"
 };
 
 export async function OPTIONS() {

@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { listProjects, toWidgetConfig } from "@/lib/widget-store";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
+import { Plus, Settings, Code2, Pencil, FolderOpen, Globe } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export default async function ProjectsPage() {
   const prisma = getSharedPrismaClient();
   const membership = await prisma.workspaceMember.findFirst({
     where: { userId: user.id },
-    include: { workspace: true }
+    include: { workspace: { select: { id: true, name: true } } }
   });
 
   const projects = await listProjects();
@@ -32,29 +33,70 @@ export default async function ProjectsPage() {
     >
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold">Projects</h1>
-          <p className="mt-1 text-slate-600">Manage widget installs and project snippets.</p>
+          <h1 className="text-3xl font-semibold text-slate-900">Projects</h1>
+          <p className="mt-1 text-slate-600">Manage your AI widget projects</p>
         </div>
-        <Link className="rounded-md bg-slate-950 px-4 py-2 text-sm text-white" href="/projects/new">New project</Link>
+        <Link className="rounded-lg bg-violet-600 px-4 py-2 text-sm text-white hover:bg-violet-700 transition-colors flex items-center gap-1.5" href="/projects/new">
+          <Plus className="w-4 h-4" />
+          New Project
+        </Link>
       </div>
-      <div className="mt-8 overflow-hidden rounded-lg border bg-white">
-        {projects.map((project) => {
-          const config = toWidgetConfig(project);
-          return (
-            <div className="grid gap-4 border-b p-5 last:border-b-0 md:grid-cols-[1fr_auto]" key={project.id}>
-              <div>
-                <h2 className="font-semibold">{project.name}</h2>
-                <p className="mt-1 text-sm text-slate-600">Client ID: {project.clientId}</p>
-                <p className="mt-1 text-sm text-slate-600">Bot: {config.botName}</p>
+
+      {projects.length === 0 ? (
+        <div className="mt-8 flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 px-4">
+          <FolderOpen className="w-12 h-12 text-slate-300 mb-4" />
+          <p className="text-lg font-semibold text-slate-900">No projects yet</p>
+          <p className="mt-1 text-sm text-slate-500 mb-6">Create your first project to get started</p>
+          <Link className="rounded-lg bg-violet-600 px-4 py-2 text-sm text-white hover:bg-violet-700 transition-colors" href="/projects/new">
+            Create Project
+          </Link>
+        </div>
+      ) : (
+        <div className="mt-8 flex flex-col gap-4">
+          {projects.map((project) => {
+            const config = toWidgetConfig(project);
+            return (
+              <div key={project.id} className="relative rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md hover:border-violet-200 transition-all">
+                <div className="absolute left-0 top-3 bottom-3 w-1 bg-violet-600 rounded-l-xl" />
+                <div className="flex items-start justify-between gap-4 p-5 pl-6">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-semibold text-slate-900 truncate">{project.name}</h2>
+                      <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Active</span>
+                    </div>
+                    <div className="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
+                      <Globe className="w-3.5 h-3.5 text-slate-400" />
+                      {project.siteUrl ? (
+                        <span className="truncate">{project.siteUrl}</span>
+                      ) : (
+                        <span className="text-slate-400">No site URL set</span>
+                      )}
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-slate-600">{project.clientId}</code>
+                      <span className="text-sm text-slate-500">Bot: {config.botName}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:border-violet-400 hover:text-violet-600 transition-colors flex items-center gap-1.5" href={`/projects/${project.id}/settings`}>
+                      <Settings className="w-4 h-4" />
+                      Settings
+                    </Link>
+                    <Link className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:border-violet-400 hover:text-violet-600 transition-colors flex items-center gap-1.5" href={`/projects/${project.id}/snippet`}>
+                      <Code2 className="w-4 h-4" />
+                      Snippet
+                    </Link>
+                    <Link className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white hover:bg-violet-700 transition-colors flex items-center gap-1.5" href={`/projects/${project.id}/widget`}>
+                      <Pencil className="w-4 h-4" />
+                      Customize
+                    </Link>
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Link className="rounded-md border px-3 py-2 text-sm" href={`/projects/${project.id}/widget`}>Customize</Link>
-                <Link className="rounded-md bg-blue-600 px-3 py-2 text-sm text-white" href={`/projects/${project.id}/snippet`}>Snippet</Link>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </DashboardLayout>
   );
 }

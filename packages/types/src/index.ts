@@ -17,6 +17,7 @@ export type WidgetConfig = {
   botName: string;
   welcomeMessage: string;
   avatarUrl?: string;
+  mode?: "chat" | "voice" | "both";
 };
 
 export type WidgetConfigResponse = {

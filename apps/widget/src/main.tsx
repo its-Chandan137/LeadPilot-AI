@@ -164,10 +164,13 @@ function styles(color: string) {
 
     .lp-footer { padding: 0 16px 8px; background: #fff; text-align: center; color: #94a3b8; font-size: 10px; flex-shrink: 0; letter-spacing: 0.02em; }
 
-    .lp-banner { padding: 8px 16px; font-size: 12px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; }
-    .lp-banner-error { background: #fef2f2; color: #dc2626; }
-    .lp-banner-retry { border: 0; background: transparent; color: #dc2626; text-decoration: underline; cursor: pointer; font-size: 12px; font-family: inherit; padding: 0; }
-    .lp-banner-retry:hover { color: #b91c1c; }
+    .lp-mic-wrap { position: relative; flex-shrink: 0; }
+    .lp-mic { border: 0; border-radius: 12px; background: #e5e7eb; color: #9ca3af; min-width: 46px; height: 42px; padding: 0 14px; cursor: not-allowed; opacity: 0.5; display: grid; place-items: center; transition: background 150ms; flex-shrink: 0; }
+    .lp-mic:focus-visible { outline: 2px solid ${color}; outline-offset: 2px; }
+    .lp-mic-tooltip { position: absolute; bottom: calc(100% + 6px); right: 0; background: #374151; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 150ms; }
+    .lp-mic-wrap:hover .lp-mic-tooltip { opacity: 1; }
+    .lp-mic svg { width: 18px; height: 18px; }
+    .lp-form-voice { display: flex; align-items: center; justify-content: center; padding: 16px; background: #fff; flex-shrink: 0; }
 
     .lp-loading { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 16px; background: #f8fafc; }
     .lp-loading-row { display: flex; }
@@ -250,7 +253,7 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
       .then((data) => {
         setConfig(data.config);
         setConfigLoading(false);
-        setMessages([{ id: "welcome", role: "assistant", content: data.config.welcomeMessage, createdAt: new Date() }]);
+        setMessages([{ id: "welcome", role: "assistant", content: data.config.welcomeMessage || "Hi! How can I help you Today?", createdAt: new Date() }]);
       })
       .catch((caught: unknown) => {
         setConfigLoading(false);
@@ -408,26 +411,6 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
     }
     return (
       <>
-        {messages.map((message) => (
-          <div key={message.id} className="lp-message-wrap">
-            <div className={`lp-bubble lp-${message.role}${message.status === "failed" ? " lp-failed" : ""}`}>
-              {message.content}
-              <div className="lp-time">{formatTimeFull(message.createdAt ?? new Date())}</div>
-            </div>
-            {message.status === "failed" && (
-              <div className="lp-time" style={{ textAlign: "right", marginTop: -6, marginBottom: 10 }}>
-                <button
-                  className="lp-banner-retry"
-                  onClick={handleRetry}
-                  type="button"
-                  aria-label="Retry sending message"
-                >
-                  Failed - Tap to retry
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
         {showWelcome && (
           <div className="lp-welcome lp-message-wrap">
             <div className="lp-welcome-avatar" aria-hidden="true">{config?.botName.charAt(0) ?? "L"}</div>
@@ -448,6 +431,26 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
             </div>
           </div>
         )}
+        {messages.map((message) => (
+          <div key={message.id} className="lp-message-wrap">
+            <div className={`lp-bubble lp-${message.role}${message.status === "failed" ? " lp-failed" : ""}`}>
+              {message.content}
+              <div className="lp-time">{formatTimeFull(message.createdAt ?? new Date())}</div>
+            </div>
+            {message.status === "failed" && (
+              <div className="lp-time" style={{ textAlign: "right", marginTop: -6, marginBottom: 10 }}>
+                <button
+                  className="lp-banner-retry"
+                  onClick={handleRetry}
+                  type="button"
+                  aria-label="Retry sending message"
+                >
+                  Failed - Tap to retry
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
         {status === "loading" && <TypingIndicator />}
         {errorType && status !== "loading" && (
           <div className="lp-banner lp-banner-error" role="alert">
@@ -462,9 +465,75 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
     );
   }
 
+  const mode = config?.mode ?? "chat";
   const activeColor = config?.color ?? "#2563eb";
   const canSend = !!(draft.trim() && conversationId && status !== "loading");
   const isFormDisabled = status === "loading" || !conversationId;
+
+  function renderInputArea() {
+    if (mode === "voice") {
+      return (
+        <div className="lp-form-voice">
+          <div className="lp-mic-wrap">
+            <button className="lp-mic" disabled type="button" aria-label="Voice coming soon">
+              <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
+                <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
+                <line x1="8" y1="23" x2="16" y2="23" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
+              </svg>
+            </button>
+            <span className="lp-mic-tooltip" aria-hidden="true">Coming Soon</span>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <form className="lp-form" onSubmit={handleSubmit}>
+        <div className="lp-input-wrap">
+          <textarea
+            ref={textareaRef}
+            className="lp-textarea"
+            rows={1}
+            disabled={isFormDisabled}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={conversationId ? "Type your message..." : "Connecting..."}
+            value={draft}
+            aria-label="Message input"
+          />
+        </div>
+        <button
+          className="lp-send"
+          disabled={!canSend}
+          type="submit"
+          aria-label={status === "loading" ? "Sending message" : "Send message"}
+        >
+          {status === "loading" ? (
+            <span className="lp-send-spinner" aria-hidden="true" />
+          ) : (
+            <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 20 20" width="18">
+              <path d="M2.5 10l15-7.5-7.5 15L8.75 11.25 2.5 10z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+            </svg>
+          )}
+        </button>
+        {mode === "both" && (
+          <div className="lp-mic-wrap">
+            <button className="lp-mic" disabled type="button" aria-label="Voice coming soon">
+              <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
+                <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
+                <line x1="8" y1="23" x2="16" y2="23" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
+              </svg>
+            </button>
+            <span className="lp-mic-tooltip" aria-hidden="true">Coming Soon</span>
+          </div>
+        )}
+      </form>
+    );
+  }
 
   return (
     <>
@@ -506,35 +575,7 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
             <div className="lp-messages" ref={scrollRef} role="log" aria-label="Chat messages" aria-live="polite">
               {renderMessages()}
             </div>
-            <form className="lp-form" onSubmit={handleSubmit}>
-              <div className="lp-input-wrap">
-                <textarea
-                  ref={textareaRef}
-                  className="lp-textarea"
-                  rows={1}
-                  disabled={isFormDisabled}
-                  onChange={(e) => handleInputChange(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={conversationId ? "Type your message..." : "Connecting..."}
-                  value={draft}
-                  aria-label="Message input"
-                />
-              </div>
-              <button
-                className="lp-send"
-                disabled={!canSend}
-                type="submit"
-                aria-label={status === "loading" ? "Sending message" : "Send message"}
-              >
-                {status === "loading" ? (
-                  <span className="lp-send-spinner" aria-hidden="true" />
-                ) : (
-                  <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 20 20" width="18">
-                    <path d="M2.5 10l15-7.5-7.5 15L8.75 11.25 2.5 10z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-                  </svg>
-                )}
-              </button>
-            </form>
+            {renderInputArea()}
             <footer className="lp-footer">Powered by LeadPilot</footer>
           </section>
         )}
