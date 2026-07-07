@@ -16,6 +16,7 @@ type WidgetConfigJson = {
   welcomeMessage?: string;
   avatarUrl?: string;
   mode?: "chat" | "voice" | "both";
+  livekitUrl?: string;
 };
 
 const demoProject: StoredProject = {
@@ -59,7 +60,8 @@ export function toWidgetConfig(project: StoredProject): WidgetConfig {
     botName: config.botName ?? "LeadPilot",
     welcomeMessage: config.welcomeMessage ?? "Hi! How can I help you today?",
     avatarUrl: config.avatarUrl,
-    mode: (config.mode as "chat" | "voice" | "both") ?? "chat"
+    mode: (config.mode as "chat" | "voice" | "both") ?? "chat",
+    livekitUrl: config.livekitUrl || process.env.LIVEKIT_URL || "wss://your-app.livekit.cloud"
   };
 }
 

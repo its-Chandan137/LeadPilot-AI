@@ -18,6 +18,7 @@ export type WidgetConfig = {
   welcomeMessage: string;
   avatarUrl?: string;
   mode?: "chat" | "voice" | "both";
+  livekitUrl?: string;
 };
 
 export type WidgetConfigResponse = {

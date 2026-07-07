@@ -1,3 +1,4 @@
+import { Room, RoomEvent, createLocalAudioTrack } from "livekit-client";
 import React, { Component, type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { ApiResponse, ChatResponse, ConversationStartResponse, WidgetConfigResponse, WidgetConfig } from "@leadpilot/types";
@@ -243,6 +244,9 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [configLoading, setConfigLoading] = useState(true);
 
+  const [voiceState, setVoiceState] = useState<"idle" | "connecting" | "active" | "ending">("idle");
+  const [room, setRoom] = useState<Room | null>(null);
+
   const visitorId = useMemo(createVisitorId, []);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -402,6 +406,38 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
     }
   }
 
+  async function startVoiceCall() {
+    if (voiceState !== "idle" || !config) return;
+    setVoiceState("connecting");
+    try {
+      const data = await requestJson<{ token: string; roomName: string }>(`${apiUrl}/api/voice/token`, {
+        method: "POST",
+        body: JSON.stringify({ clientId, visitorId }),
+      });
+      const newRoom = new Room();
+      await newRoom.connect(config.livekitUrl || "", data.token);
+      const audioTrack = await createLocalAudioTrack();
+      await newRoom.localParticipant.publishTrack(audioTrack);
+      newRoom.on(RoomEvent.Disconnected, () => {
+        setVoiceState("idle");
+        setRoom(null);
+      });
+      setRoom(newRoom);
+      setVoiceState("active");
+    } catch (err) {
+      console.error("Voice call failed:", err);
+      setVoiceState("idle");
+    }
+  }
+
+  async function endVoiceCall() {
+    if (!room || voiceState !== "active") return;
+    setVoiceState("ending");
+    await room.disconnect();
+    setRoom(null);
+    setVoiceState("idle");
+  }
+
   const hasUserMessages = messages.some((m) => m.role === "user");
   const showWelcome = messages.length > 0 && !hasUserMessages && showSuggestions && status !== "loading";
 
@@ -471,19 +507,46 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
   const isFormDisabled = status === "loading" || !conversationId;
 
   function renderInputArea() {
+    const livekitUrl = config?.livekitUrl || "";
+
     if (mode === "voice") {
       return (
         <div className="lp-form-voice">
           <div className="lp-mic-wrap">
-            <button className="lp-mic" disabled type="button" aria-label="Voice coming soon">
-              <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-                <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-                <line x1="8" y1="23" x2="16" y2="23" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-              </svg>
+            <button
+              onClick={voiceState === "active" ? endVoiceCall : startVoiceCall}
+              disabled={voiceState === "connecting" || voiceState === "ending"}
+              style={{
+                background: voiceState === "active" ? "#EF4444" : activeColor,
+                border: "none",
+                borderRadius: "50%",
+                width: "36px",
+                height: "36px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: voiceState === "connecting" || voiceState === "ending" ? "not-allowed" : "pointer",
+                opacity: voiceState === "connecting" || voiceState === "ending" ? 0.6 : 1,
+                transition: "all 0.2s ease",
+                flexShrink: 0,
+              }}
+              aria-label={voiceState === "active" ? "End voice call" : "Start voice call"}
+              title={voiceState === "connecting" ? "Connecting..." : voiceState === "ending" ? "Ending..." : voiceState === "active" ? "Tap to end call" : "Start voice call"}
+            >
+              {voiceState === "active" ? (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="white">
+                  <rect x="3" y="3" width="10" height="10" rx="1" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="white">
+                  <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1-5 0v-4A2.5 2.5 0 0 1 8 1z" />
+                  <path d="M4.5 8.5A3.5 3.5 0 0 0 8 12a3.5 3.5 0 0 0 3.5-3.5M8 12v2M6 14h4" />
+                </svg>
+              )}
             </button>
-            <span className="lp-mic-tooltip" aria-hidden="true">Coming Soon</span>
+            <span className="lp-mic-tooltip" aria-hidden="true">
+              {voiceState === "active" ? "Tap to end call" : voiceState === "connecting" ? "Connecting..." : "Start voice call"}
+            </span>
           </div>
         </div>
       );
@@ -520,15 +583,42 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
         </button>
         {mode === "both" && (
           <div className="lp-mic-wrap">
-            <button className="lp-mic" disabled type="button" aria-label="Voice coming soon">
-              <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-                <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-                <line x1="8" y1="23" x2="16" y2="23" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-              </svg>
+            <button
+              onClick={voiceState === "active" ? endVoiceCall : startVoiceCall}
+              disabled={voiceState === "connecting" || voiceState === "ending"}
+              style={{
+                background: voiceState === "active" ? "#EF4444" : activeColor,
+                border: "none",
+                borderRadius: "12px",
+                minWidth: "46px",
+                height: "42px",
+                padding: "0 14px",
+                display: "grid",
+                placeItems: "center",
+                cursor: voiceState === "connecting" || voiceState === "ending" ? "not-allowed" : "pointer",
+                opacity: voiceState === "connecting" || voiceState === "ending" ? 0.6 : 1,
+                transition: "background 150ms",
+                flexShrink: 0,
+              }}
+              aria-label={voiceState === "active" ? "End voice call" : "Start voice call"}
+              title={voiceState === "connecting" ? "Connecting..." : voiceState === "ending" ? "Ending..." : voiceState === "active" ? "Tap to end call" : "Start voice call"}
+            >
+              {voiceState === "active" ? (
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="white">
+                  <rect x="3" y="3" width="10" height="10" rx="1" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+              )}
             </button>
-            <span className="lp-mic-tooltip" aria-hidden="true">Coming Soon</span>
+            <span className="lp-mic-tooltip" aria-hidden="true">
+              {voiceState === "active" ? "Tap to end call" : voiceState === "connecting" ? "Connecting..." : "Start voice call"}
+            </span>
           </div>
         )}
       </form>
