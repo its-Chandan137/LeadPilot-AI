@@ -16,6 +16,8 @@ type WidgetConfigJson = {
   welcomeMessage?: string;
   avatarUrl?: string;
   mode?: "chat" | "voice" | "both";
+  livekitUrl?: string;
+  provider?: "groq" | "livekit-openai" | "sarvam";
 };
 
 const demoProject: StoredProject = {
@@ -27,7 +29,8 @@ const demoProject: StoredProject = {
     color: "#2563eb",
     botName: "Ava",
     welcomeMessage: "Hi! I can help you choose the right service.",
-    mode: "chat"
+    mode: "chat",
+    provider: "groq"
   }
 };
 
@@ -59,7 +62,9 @@ export function toWidgetConfig(project: StoredProject): WidgetConfig {
     botName: config.botName ?? "LeadPilot",
     welcomeMessage: config.welcomeMessage ?? "Hi! How can I help you today?",
     avatarUrl: config.avatarUrl,
-    mode: (config.mode as "chat" | "voice" | "both") ?? "chat"
+    mode: (config.mode as "chat" | "voice" | "both") ?? "chat",
+    livekitUrl: config.livekitUrl || process.env.LIVEKIT_URL || "wss://your-app.livekit.cloud",
+    provider: config.provider ?? "groq"
   };
 }
 

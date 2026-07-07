@@ -18,6 +18,8 @@ export type WidgetConfig = {
   welcomeMessage: string;
   avatarUrl?: string;
   mode?: "chat" | "voice" | "both";
+  livekitUrl?: string;
+  provider?: "groq" | "livekit-openai" | "sarvam";
 };
 
 export type WidgetConfigResponse = {

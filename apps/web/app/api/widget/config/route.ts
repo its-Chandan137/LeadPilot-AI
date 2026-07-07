@@ -14,7 +14,9 @@ const demoConfig = {
   color: "#2563eb",
   botName: "Ava",
   welcomeMessage: "Hi! I can help you choose the right service.",
-  mode: "chat"
+  mode: "chat",
+  provider: "groq",
+  livekitUrl: process.env.LIVEKIT_URL ?? "wss://your-app.livekit.cloud"
 };
 
 export async function OPTIONS() {
@@ -35,10 +37,26 @@ export async function GET(request: Request) {
     const project = await findProjectByClientId(parsed.data.clientId);
 
     if (!project) {
-      return ok({ config: { ...demoConfig, clientId: parsed.data.clientId } });
+      const livekitUrl = process.env.LIVEKIT_URL;
+      if (!livekitUrl) {
+        return fail("Server misconfigured: LIVEKIT_URL is missing", 500);
+      }
+      return ok({
+        config: {
+          ...demoConfig,
+          clientId: parsed.data.clientId,
+          livekitUrl
+        }
+      });
     }
 
-    return ok({ config: toWidgetConfig(project) });
+    const config = toWidgetConfig(project);
+
+    if (!config.livekitUrl) {
+      return fail("Server misconfigured: LIVEKIT_URL is missing", 500);
+    }
+
+    return ok({ config });
   } catch (error) {
     logger.error(error);
     return fail("Unable to load widget config", 500);

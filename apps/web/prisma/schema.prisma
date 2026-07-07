@@ -47,6 +47,7 @@ model Project {
   updatedAt     DateTime           @updatedAt
   workspace     Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   conversations Conversation[]
+  voiceConversations VoiceConversation[]
   leads         Lead[]
   sources       KnowledgeSource[]
   chunks        KnowledgeChunk[]
@@ -156,4 +157,26 @@ enum SourceStatus {
   PROCESSING
   READY
   FAILED
+}
+
+model VoiceConversation {
+  id         String         @id @default(cuid())
+  projectId  String
+  visitorId  String
+  roomName   String         @unique
+  duration   Int?
+  status     String         @default("active")
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  project    Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messages   VoiceMessage[]
+}
+
+model VoiceMessage {
+  id                 String            @id @default(cuid())
+  voiceConversationId String
+  role               String
+  content            String
+  createdAt          DateTime          @default(now())
+  voiceConversation  VoiceConversation @relation(fields: [voiceConversationId], references: [id], onDelete: Cascade)
 }

@@ -4,11 +4,12 @@ import { NextResponse } from "next/server";
 
 const publicRoutes = ["/", "/login", "/signup", "/auth/callback"];
 const apiWidgetPrefix = "/api/widget/";
+const apiVoicePrefix = "/api/voice/";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith(apiWidgetPrefix)) {
+  if (pathname.startsWith(apiWidgetPrefix) || pathname.startsWith(apiVoicePrefix)) {
     return NextResponse.next();
   }
 
