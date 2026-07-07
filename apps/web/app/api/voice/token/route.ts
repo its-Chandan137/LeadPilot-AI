@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { corsHeaders, fail, ok } from "@/lib/api-response";
 import { getSharedPrismaClient } from "@/lib/prisma";
-import { AccessToken } from "livekit-server-sdk";
+import { AccessToken, AgentDispatchClient } from "livekit-server-sdk";
 
 const bodySchema = z.object({
   clientId: z.string().min(1),
@@ -66,6 +66,24 @@ export async function POST(request: Request) {
 
     const jwt = await token.toJwt();
     console.log(typeof jwt, jwt.substring(0, 20));
+
+    try {
+      const dispatchClient = new AgentDispatchClient(
+        process.env.LIVEKIT_URL!,
+        process.env.LIVEKIT_API_KEY!,
+        process.env.LIVEKIT_API_SECRET!
+      );
+      await dispatchClient.createDispatch(roomName, "leadpilot-agent", {
+        metadata: JSON.stringify({
+          projectId: project.id,
+          visitorId,
+          voiceConversationId: voiceConversation.id,
+        }),
+      });
+      console.log(`[Voice] Dispatched agent to room: ${roomName}`);
+    } catch (dispatchErr) {
+      console.error("[Voice] Agent dispatch failed:", dispatchErr);
+    }
 
     return ok({
       token: jwt,

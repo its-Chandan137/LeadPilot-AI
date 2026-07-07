@@ -19,6 +19,7 @@ export type WidgetConfig = {
   avatarUrl?: string;
   mode?: "chat" | "voice" | "both";
   livekitUrl?: string;
+  provider?: "groq" | "livekit-openai" | "sarvam";
 };
 
 export type WidgetConfigResponse = {

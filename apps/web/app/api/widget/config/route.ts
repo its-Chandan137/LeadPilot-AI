@@ -15,6 +15,7 @@ const demoConfig = {
   botName: "Ava",
   welcomeMessage: "Hi! I can help you choose the right service.",
   mode: "chat",
+  provider: "groq",
   livekitUrl: process.env.LIVEKIT_URL ?? "wss://your-app.livekit.cloud"
 };
 
