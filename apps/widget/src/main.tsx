@@ -187,7 +187,7 @@ function styles(color: string) {
     @keyframes lp-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
     @media (max-width: 520px) {
-      .lp-widget { right: 0; bottom: 0; width: 10px; height: 10px; }
+      .lp-widget { right: 10px; bottom: 10px; }
       .lp-panel { width: 100%; height: 100%; border-radius: 0; border: none; }
       .lp-header { padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
       .lp-close { width: 40px; height: 40px; }
