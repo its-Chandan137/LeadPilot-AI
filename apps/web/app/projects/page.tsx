@@ -1,36 +1,15 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { HomeLayout } from "@/components/layout";
 import { listProjects, toWidgetConfig } from "@/lib/widget-store";
-import { getSharedPrismaClient } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
-import { Plus, Settings, Code2, Pencil, FolderOpen, Globe } from "lucide-react";
+import { Plus, ArrowRight, FolderOpen, Globe } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
-  const supabase = createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const prisma = getSharedPrismaClient();
-  const membership = await prisma.workspaceMember.findFirst({
-    where: { userId: user.id },
-    include: { workspace: { select: { id: true, name: true } } }
-  });
-
   const projects = await listProjects();
 
   return (
-    <DashboardLayout
-      workspaceName={membership?.workspace.name ?? "My Workspace"}
-      userName={user.user_metadata?.name ?? user.email ?? "User"}
-    >
+    <HomeLayout>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold text-slate-900">Projects</h1>
@@ -78,17 +57,9 @@ export default async function ProjectsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <Link className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:border-violet-400 hover:text-violet-600 transition-colors flex items-center gap-1.5" href={`/projects/${project.id}/settings`}>
-                      <Settings className="w-4 h-4" />
-                      Settings
-                    </Link>
-                    <Link className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:border-violet-400 hover:text-violet-600 transition-colors flex items-center gap-1.5" href={`/projects/${project.id}/snippet`}>
-                      <Code2 className="w-4 h-4" />
-                      Snippet
-                    </Link>
-                    <Link className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white hover:bg-violet-700 transition-colors flex items-center gap-1.5" href={`/projects/${project.id}/widget`}>
-                      <Pencil className="w-4 h-4" />
-                      Customize
+                    <Link className="rounded-lg bg-violet-600 px-4 py-2 text-sm text-white hover:bg-violet-700 transition-colors flex items-center gap-1.5" href={`/projects/${project.id}/overview`}>
+                      Open Project
+                      <ArrowRight className="w-4 h-4" />
                     </Link>
                   </div>
                 </div>
@@ -97,6 +68,6 @@ export default async function ProjectsPage() {
           })}
         </div>
       )}
-    </DashboardLayout>
+    </HomeLayout>
   );
 }

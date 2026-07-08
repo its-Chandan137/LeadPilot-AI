@@ -69,10 +69,8 @@ const statLabels: Record<keyof Stats, string> = {
 
 export function DashboardClient({
   workspaceName,
-  userName,
 }: {
   workspaceName: string;
-  userName: string;
 }) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -198,7 +196,7 @@ export function DashboardClient({
                 {data.recentConversations.map((c) => (
                   <Link
                     key={c.id}
-                    href={`/conversations?id=${c.id}`}
+                    href={`/projects`}
                     className="flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors group"
                   >
                     <div className="min-w-0 flex-1">

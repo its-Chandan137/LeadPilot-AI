@@ -19,6 +19,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { BrandLoader } from "@/components/ui/brand-loader";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -78,11 +79,7 @@ export function DashboardLayout({ children, workspaceName, userName }: Dashboard
 
   return (
     <>
-      {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-sm pointer-events-none">
-          <div className="w-10 h-10 rounded-full border-4 border-[#EDE9FE] border-t-[#7C3AED] animate-spin" />
-        </div>
-      )}
+      {loading && <BrandLoader />}
       <div className="flex min-h-screen bg-[#F5F3FF]">
         <aside className="fixed w-64 h-screen bg-white border-r border-[#E5E7EB] flex flex-col overflow-y-auto">
           {/* Logo */}
@@ -135,7 +132,7 @@ export function DashboardLayout({ children, workspaceName, userName }: Dashboard
           {/* Bottom section */}
           <div className="mt-auto">
             {/* Widget status */}
-            <div className="mx-3 mb-3 p-3 rounded-xl border border-[#E5E7EB] bg-white">
+            <div className="mx-3 mb-3 mt-2 p-3 rounded-xl border border-[#E5E7EB] bg-white">
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
                 <span className="text-sm font-medium text-[#111827]">Active</span>

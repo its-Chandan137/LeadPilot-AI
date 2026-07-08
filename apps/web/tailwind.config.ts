@@ -8,7 +8,18 @@ const config: Config = {
     "../../packages/ui/src/**/*.{ts,tsx}"
   ],
   theme: {
-    extend: {}
+    extend: {
+      animation: {
+        "spin-slow": "spin 2s linear infinite",
+        "pulse-subtle": "pulse-subtle 2s ease-in-out infinite",
+      },
+      keyframes: {
+        "pulse-subtle": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.6" },
+        },
+      },
+    }
   },
   plugins: []
 };

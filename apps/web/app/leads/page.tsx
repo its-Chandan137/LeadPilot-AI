@@ -1,6 +1,5 @@
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { HomeLayout } from "@/components/layout";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { LeadsClient } from "./leads-client";
@@ -10,26 +9,21 @@ export const dynamic = "force-dynamic";
 export default async function LeadsPage() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
   const prisma = getSharedPrismaClient();
   const membership = await prisma.workspaceMember.findFirst({
-    where: { userId: user.id },
+    where: { userId: user!.id },
     include: { workspace: { select: { id: true, name: true } } },
   });
-  if (!membership) redirect("/login");
 
   const projects = await prisma.project.findMany({
-    where: { workspaceId: membership.workspace.id },
+    where: { workspaceId: membership!.workspace.id },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });
 
   return (
-    <DashboardLayout
-      workspaceName={membership.workspace.name}
-      userName={user.email ?? "User"}
-    >
+    <HomeLayout>
       <Suspense fallback={
         <div className="flex h-[calc(100vh-8rem)] -mx-8 -mb-6">
           <div className="w-[380px] border-r border-[#E5E7EB] bg-white">
@@ -57,6 +51,6 @@ export default async function LeadsPage() {
       }>
         <LeadsClient projects={projects} />
       </Suspense>
-    </DashboardLayout>
+    </HomeLayout>
   );
 }
