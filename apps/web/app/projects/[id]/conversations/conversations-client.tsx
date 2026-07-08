@@ -6,11 +6,6 @@ import { Input } from "@/components/ui/input";
 import { ConversationSidebar } from "./conversation-sidebar";
 import { ConversationChat } from "./conversation-chat";
 
-type Project = {
-  id: string;
-  name: string;
-};
-
 type LeadInfo = {
   name: string | null;
   email: string | null;
@@ -55,10 +50,9 @@ type ConversationDetail = {
   messages: MessageDetail[];
 };
 
-export function ConversationsClient({ projects }: { projects: Project[] }) {
+export function ConversationsClient({ projectId, projectName }: { projectId: string; projectName: string }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [projectFilter, setProjectFilter] = useState("all");
   const [dateRange, setDateRange] = useState("all");
   const [page, setPage] = useState(1);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
@@ -74,8 +68,8 @@ export function ConversationsClient({ projects }: { projects: Project[] }) {
       const params = new URLSearchParams();
       params.set("page", String(page));
       params.set("limit", "25");
+      params.set("projectId", projectId);
       if (search) params.set("search", search);
-      if (projectFilter !== "all") params.set("projectId", projectFilter);
       if (dateRange !== "all") params.set("dateRange", dateRange);
 
       const res = await fetch(`/api/conversations?${params}`);
@@ -87,7 +81,7 @@ export function ConversationsClient({ projects }: { projects: Project[] }) {
     } finally {
       setLoadingList(false);
     }
-  }, [page, search, projectFilter, dateRange]);
+  }, [page, search, dateRange, projectId]);
 
   useEffect(() => {
     fetchConversations();
@@ -123,11 +117,6 @@ export function ConversationsClient({ projects }: { projects: Project[] }) {
     setPage(1);
   }
 
-  function handleProjectChange(value: string) {
-    setProjectFilter(value);
-    setPage(1);
-  }
-
   function handleDateRangeChange(value: string) {
     setDateRange(value);
     setPage(1);
@@ -149,16 +138,6 @@ export function ConversationsClient({ projects }: { projects: Project[] }) {
             />
           </div>
           <div className="flex gap-2">
-            <select
-              value={projectFilter}
-              onChange={(e) => handleProjectChange(e.target.value)}
-              className="flex-1 h-9 rounded-md border border-slate-300 bg-white px-2 text-xs outline-none"
-            >
-              <option value="all">All Projects</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
             <select
               value={dateRange}
               onChange={(e) => handleDateRangeChange(e.target.value)}

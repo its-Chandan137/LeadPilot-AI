@@ -3,12 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Upload, FileText, Globe, Trash2, RefreshCw, File } from "lucide-react";
 
-type Project = {
-  id: string;
-  name: string;
-  clientId: string;
-};
-
 type KnowledgeSource = {
   id: string;
   name: string;
@@ -22,8 +16,7 @@ type KnowledgeSource = {
 
 type Tab = "text" | "document" | "url";
 
-export function KnowledgeClient({ projects }: { projects: Project[] }) {
-  const [selectedProject, setSelectedProject] = useState<string>(projects[0]?.id ?? "");
+export function KnowledgeClient({ projectId }: { projectId: string }) {
   const [activeTab, setActiveTab] = useState<Tab>("text");
   const [textName, setTextName] = useState("");
   const [textContent, setTextContent] = useState("");
@@ -33,23 +26,20 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [sources, setSources] = useState<KnowledgeSource[]>([]);
 
-  // Document upload states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [docName, setDocName] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedProjectData = projects.find(p => p.id === selectedProject);
-
   useEffect(() => {
-    if (selectedProject) {
-      fetchSources(selectedProject);
+    if (projectId) {
+      fetchSources(projectId);
     }
-  }, [selectedProject]);
+  }, [projectId]);
 
-  async function fetchSources(projectId: string) {
+  async function fetchSources(pid: string) {
     try {
-      const res = await fetch(`/api/knowledge/sources?projectId=${projectId}`);
+      const res = await fetch(`/api/knowledge/sources?projectId=${pid}`);
       const data = await res.json();
       if (data.success) {
         setSources(data.data.sources);
@@ -61,7 +51,7 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
 
   async function handleTextSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedProject || !textName || !textContent) return;
+    if (!projectId || !textName || !textContent) return;
 
     setLoading(true);
     setMessage(null);
@@ -71,7 +61,7 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          projectId: selectedProject,
+          projectId,
           type: "TEXT",
           name: textName,
           content: textContent
@@ -84,7 +74,7 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
         setMessage({ type: "success", text: `Added ${data.data.chunksCreated} chunks to knowledge base` });
         setTextName("");
         setTextContent("");
-        fetchSources(selectedProject);
+        fetchSources(projectId);
       } else {
         setMessage({ type: "error", text: data.error || "Failed to add knowledge" });
       }
@@ -97,7 +87,7 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
 
   async function handleDocumentSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedProject || !selectedFile || !docName) return;
+    if (!projectId || !selectedFile || !docName) return;
 
     setLoading(true);
     setMessage(null);
@@ -105,7 +95,7 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
-      formData.append("projectId", selectedProject);
+      formData.append("projectId", projectId);
       formData.append("name", docName);
 
       const res = await fetch("/api/knowledge/upload", {
@@ -119,7 +109,7 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
         setMessage({ type: "success", text: `Added ${data.data.chunksCreated} chunks from ${data.data.filename}` });
         setSelectedFile(null);
         setDocName("");
-        fetchSources(selectedProject);
+        fetchSources(projectId);
       } else {
         setMessage({ type: "error", text: data.error || "Failed to upload document" });
       }
@@ -132,7 +122,7 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
 
   async function handleCrawlSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedProject || !url || !crawlName) return;
+    if (!projectId || !url || !crawlName) return;
 
     setLoading(true);
     setMessage(null);
@@ -142,7 +132,7 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          projectId: selectedProject,
+          projectId,
           url,
           name: crawlName
         })
@@ -154,7 +144,7 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
         setMessage({ type: "success", text: `Crawled ${data.data.pagesVisited} pages, added ${data.data.chunksCreated} chunks` });
         setUrl("");
         setCrawlName("");
-        fetchSources(selectedProject);
+        fetchSources(projectId);
       } else {
         setMessage({ type: "error", text: data.error || "Failed to crawl website" });
       }
@@ -175,8 +165,8 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
 
       const data = await res.json();
 
-      if (data.success && selectedProject) {
-        fetchSources(selectedProject);
+      if (data.success && projectId) {
+        fetchSources(projectId);
       }
     } catch (error) {
       console.error("Failed to delete source:", error);
@@ -245,22 +235,6 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
         <p className="text-gray-500">Add content to power your AI chatbot responses.</p>
       </div>
 
-      <div className="flex items-center gap-4">
-        <label className="text-sm font-medium">Project:</label>
-        <select
-          value={selectedProject}
-          onChange={(e) => setSelectedProject(e.target.value)}
-          className="px-3 py-2 border rounded-lg"
-        >
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-        {selectedProjectData && (
-          <span className="text-sm text-gray-500">Client ID: {selectedProjectData.clientId}</span>
-        )}
-      </div>
-
       <div className="bg-white border rounded-lg p-6">
         <div className="flex gap-2 mb-4 border-b">
           <button
@@ -324,7 +298,7 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
             </div>
             <button
               type="submit"
-              disabled={loading || !selectedProject}
+              disabled={loading || !projectId}
               className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
             >
               {loading ? "Adding..." : "Add to Knowledge Base"}
@@ -387,7 +361,7 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
                 </div>
                 <button
                   type="submit"
-                  disabled={loading || !selectedProject}
+                  disabled={loading || !projectId}
                   className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
                 >
                   {loading ? "Extracting and indexing..." : "Upload Document"}
@@ -423,7 +397,7 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
             </div>
             <button
               type="submit"
-              disabled={loading || !selectedProject}
+              disabled={loading || !projectId}
               className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
             >
               {loading ? "Crawling website... this may take 30-60 seconds" : "Crawl Website"}
@@ -444,7 +418,7 @@ export function KnowledgeClient({ projects }: { projects: Project[] }) {
         <div className="p-4 border-b flex items-center justify-between">
           <h2 className="font-semibold">Knowledge Sources</h2>
           <button
-            onClick={() => selectedProject && fetchSources(selectedProject)}
+            onClick={() => projectId && fetchSources(projectId)}
             className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
             title="Refresh sources"
           >
