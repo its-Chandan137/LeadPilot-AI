@@ -17,7 +17,7 @@ export function createPrismaClient() {
   }
 
   return new PrismaClient({
-    adapter: new PrismaPg({ connectionString })
+    adapter: new PrismaPg({ connectionString, pool: { max: 3 } })
   });
 }
 
