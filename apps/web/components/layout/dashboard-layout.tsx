@@ -132,7 +132,7 @@ export function DashboardLayout({ children, workspaceName, userName }: Dashboard
           {/* Bottom section */}
           <div className="mt-auto">
             {/* Widget status */}
-            <div className="mx-3 mb-3 p-3 rounded-xl border border-[#E5E7EB] bg-white">
+            <div className="mx-3 mb-3 mt-2 p-3 rounded-xl border border-[#E5E7EB] bg-white">
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
                 <span className="text-sm font-medium text-[#111827]">Active</span>

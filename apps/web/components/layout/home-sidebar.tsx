@@ -99,41 +99,44 @@ function InnerSidebar({
         )}
       </div>
 
-      {/* Menu label */}
-      {!collapsed && (
-        <p className="px-5 mt-4 mb-1 text-[10px] font-semibold text-[#9CA3AF] tracking-widest">MENU</p>
-      )}
+      {/* Scrollable nav area */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {/* Menu label */}
+        {!collapsed && (
+          <p className="px-5 mt-4 mb-1 text-[10px] font-semibold text-[#9CA3AF] tracking-widest">MENU</p>
+        )}
 
-      {/* Nav items */}
-      <nav className="px-3 flex flex-col gap-0.5">
-        {navItems.map((item) => {
-          const active = isActive(pathname, item.href);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`relative overflow-hidden flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                active
-                  ? "bg-[#EDE9FE] text-[#7C3AED] before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[3px] before:bg-[#7C3AED] before:rounded-r-full"
-                  : "text-[#6B7280] hover:bg-[#F5F3FF] hover:text-[#7C3AED]"
-              } ${collapsed ? "justify-center" : ""}`}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              {!collapsed && (
-                <div className="flex items-center gap-2">
-                  <span>{item.label}</span>
-                  {item.comingSoon && (
-                    <span className="text-[10px] font-medium text-[#7C3AED] bg-[#EDE9FE] rounded-full px-1.5 py-0.5 leading-none">
-                      Coming Soon
-                    </span>
-                  )}
-                </div>
-              )}
-            </Link>
-          );
-        })}
-      </nav>
+        {/* Nav items */}
+        <nav className="px-3 flex flex-col gap-0.5">
+          {navItems.map((item) => {
+            const active = isActive(pathname, item.href);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`relative overflow-hidden flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  active
+                    ? "bg-[#EDE9FE] text-[#7C3AED] before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[3px] before:bg-[#7C3AED] before:rounded-r-full"
+                    : "text-[#6B7280] hover:bg-[#F5F3FF] hover:text-[#7C3AED]"
+                } ${collapsed ? "justify-center" : ""}`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                {!collapsed && (
+                  <div className="flex items-center gap-2">
+                    <span>{item.label}</span>
+                    {item.comingSoon && (
+                      <span className="text-[10px] font-medium text-[#7C3AED] bg-[#EDE9FE] rounded-full px-1.5 py-0.5 leading-none">
+                        Coming Soon
+                      </span>
+                    )}
+                  </div>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
 
       {/* Bottom section */}
       <div className="mt-auto">
@@ -143,13 +146,13 @@ function InnerSidebar({
             <span className="w-2 h-2 rounded-full bg-green-500" />
           </div>
         ) : (
-          <div className="mx-3 mb-3 p-3 rounded-xl border border-[#E5E7EB] bg-white">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              <span className="text-sm font-medium text-[#111827]">Active</span>
+          <div className="mx-3 mb-2 mt-2 p-2 rounded-lg border border-[#E5E7EB] bg-white">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+              <span className="text-xs font-medium text-[#111827]">Active</span>
+              <span className="text-[10px] text-[#6B7280]">· Widget is live</span>
             </div>
-            <p className="text-xs text-[#6B7280] mb-2">Widget is live</p>
-            <Link href="/projects" className="text-xs text-[#7C3AED] font-medium hover:underline">
+            <Link href="/projects" className="text-[10px] text-[#7C3AED] font-medium hover:underline">
               View Projects &rarr;
             </Link>
           </div>
