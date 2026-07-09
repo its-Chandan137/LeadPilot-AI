@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LeadPilot Test Site</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        color: #172033;
+        background: #ffffff;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 24px 8vw;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      nav {
+        display: flex;
+        gap: 18px;
+        font-size: 14px;
+      }
+
+      .hero {
+        display: grid;
+        min-height: 68vh;
+        align-items: center;
+        gap: 36px;
+        padding: 48px 8vw;
+        background: linear-gradient(135deg, #f8fafc, #e0f2fe);
+      }
+
+      h1 {
+        max-width: 760px;
+        margin: 0;
+        font-size: clamp(42px, 8vw, 72px);
+        line-height: 0.98;
+      }
+
+      .hero p {
+        max-width: 620px;
+        font-size: 20px;
+        line-height: 1.6;
+      }
+
+      .button {
+        display: inline-block;
+        width: fit-content;
+        border-radius: 8px;
+        background: #111827;
+        color: white;
+        padding: 14px 18px;
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      .sections {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        padding: 48px 8vw;
+      }
+
+      .card {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 24px;
+      }
+
+      footer {
+        padding: 32px 8vw;
+        background: #111827;
+        color: white;
+      }
+
+      @media (max-width: 760px) {
+        .sections {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Acme Services</strong>
+      <nav>
+        <span>Services</span>
+        <span>Pricing</span>
+        <span>Contact</span>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <h1>Reliable operations support for growing service teams.</h1>
+          <p>Acme Services helps local businesses handle inbound requests, appointment scheduling, and customer follow-up with practical systems.</p>
+          <a class="button" href="#contact">Book a consultation</a>
+        </div>
+      </section>
+
+      <section class="sections">
+        <article class="card">
+          <h2>Scheduling</h2>
+          <p>Keep your calendar clean with structured intake and appointment handoff.</p>
+        </article>
+        <article class="card">
+          <h2>Customer care</h2>
+          <p>Respond faster to common questions and route urgent requests.</p>
+        </article>
+        <article class="card">
+          <h2>Reporting</h2>
+          <p>See which inquiries turn into qualified opportunities.</p>
+        </article>
+      </section>
+    </main>
+
+    <footer id="contact">Contact Acme Services at hello@example.com</footer>
+
+    <!-- Local dev snippet -->
+    <script
+      async
+      src="http://localhost:3000/widget.js"
+      data-client-id="demo-client-id"
+      data-api-url="http://localhost:3000"
+      data-widget-src="http://localhost:3000/widget-dist/widget.js">
+    </script>
+
+    <!--
+    PRODUCTION:
+    <script
+      async
+      src="https://leadpilot-ai-beryl.vercel.app/widget.js"
+      data-client-id="YOUR_CLIENT_ID"
+      data-api-url="https://leadpilot-ai-beryl.vercel.app"
+      data-widget-src="https://leadpilot-ai-beryl.vercel.app/widget-dist/widget.js">
+    </script>
+    -->
+  </body>
+</html>

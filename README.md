@@ -1,20 +1,94 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+# LeadPilot AI
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+Phase 1 establishes the project foundation and proves the embeddable widget connection end to end:
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+External site -> `widget.js` loader -> Shadow DOM widget -> Next.js API routes -> hardcoded reply -> widget UI.
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+AI, voice, billing, RAG, document upload, crawler, and integrations are intentionally left as TODOs for later phases.
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+## Structure
+
+```txt
+apps/
+  web/       Next.js 14 dashboard and widget API routes
+  widget/    Vite + React embeddable widget bundle
+packages/
+  config/    shared TypeScript and ESLint config
+  types/     shared API/widget types
+  ui/        small shared UI primitives
+public-cdn/  deployable vanilla widget loader
+test-site/   external HTML site for local widget testing
+```
+
+## Setup
+
+```bash
+npm install
+cp .env.example .env.local
+npm run db:generate
+```
+
+For PostgreSQL persistence, set `DATABASE_URL` and run:
+
+```bash
+npm run db:migrate
+npm run db:seed
+```
+
+If `DATABASE_URL` is empty, the API uses a local in-memory demo project with `clientId` set to `demo-client-id`. That is only for proving the Phase 1 pipe without a database.
+
+## Run Locally
+
+Start the web API/dashboard and widget dev bundle:
+
+```bash
+npm run dev
+```
+
+The web app runs on `http://localhost:3000`.
+The widget dev bundle runs on `http://localhost:5174/widget.js`.
+
+Open the dashboard:
+
+```txt
+http://localhost:3000/projects
+```
+
+Open the external test site by serving or opening:
+
+```txt
+test-site/index.html
+```
+
+The test page loads `public-cdn/widget.js`, passes `demo-client-id`, starts a conversation, sends chat messages to `/api/widget/chat`, and displays the hardcoded reply.
+
+## Phase 1 API
+
+All widget API responses use:
+
+```ts
+{ success: true, data: { ... } }
+{ success: false, error: "message" }
+```
+
+Routes:
+
+```txt
+GET  /api/widget/config?clientId=demo-client-id
+POST /api/widget/conversation/start
+POST /api/widget/chat
+```
+
+Hardcoded reply matching lives in `apps/web/app/api/widget/chat/route.ts` and is marked with the TODO for the future OpenAI + pgvector RAG implementation.
+
+## Local Snippet
+
+```html
+<script
+  async
+  src="http://localhost:3000/widget.js"
+  data-client-id="demo-client-id"
+  data-api-url="http://localhost:3000"
+  data-widget-src="http://localhost:5174/widget.js">
+</script>
+```

@@ -1,0 +1,10 @@
+{
+  "name": "@leadpilot/config",
+  "version": "0.0.0",
+  "private": true,
+  "main": "eslint.js",
+  "files": [
+    "eslint.js",
+    "tsconfig.base.json"
+  ]
+}
