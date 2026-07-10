@@ -1,5 +1,5 @@
 import type { Project } from "@prisma/client";
-import type { WidgetConfig } from "@leadpilot/types";
+import { normalizeWidgetMode, normalizeWidgetTemplate, defaultTemplateFor, type WidgetConfig } from "@leadpilot/types";
 import { getDatabaseUrl, getSharedPrismaClient } from "@/lib/prisma";
 
 type StoredProject = Pick<Project, "id" | "name" | "clientId" | "siteUrl" | "widgetConfig">;
@@ -16,6 +16,7 @@ type WidgetConfigJson = {
   welcomeMessage?: string;
   avatarUrl?: string;
   mode?: "chat" | "voice" | "both";
+  template?: string;
   livekitUrl?: string;
   provider?: "groq" | "livekit-openai" | "sarvam";
 };
@@ -30,6 +31,7 @@ const demoProject: StoredProject = {
     botName: "Ava",
     welcomeMessage: "Hi! I can help you choose the right service.",
     mode: "chat",
+    template: "chatonly-classic",
     provider: "groq"
   }
 };
@@ -54,6 +56,7 @@ function asWidgetConfigJson(value: unknown): WidgetConfigJson {
 
 export function toWidgetConfig(project: StoredProject): WidgetConfig {
   const config = asWidgetConfigJson(project.widgetConfig);
+  const mode = normalizeWidgetMode(config.mode);
 
   return {
     clientId: project.clientId,
@@ -62,9 +65,12 @@ export function toWidgetConfig(project: StoredProject): WidgetConfig {
     botName: config.botName ?? "LeadPilot",
     welcomeMessage: config.welcomeMessage ?? "Hi! How can I help you today?",
     avatarUrl: config.avatarUrl,
-    mode: (config.mode as "chat" | "voice" | "both") ?? "chat",
+    mode,
+    template: config.template
+      ? normalizeWidgetTemplate(config.template, mode)
+      : defaultTemplateFor(mode),
     livekitUrl: config.livekitUrl || process.env.LIVEKIT_URL || "wss://your-app.livekit.cloud",
-    provider: config.provider ?? "groq"
+    provider: config.provider ?? "groq",
   };
 }
 

@@ -1,23 +1,33 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import {
+  normalizeWidgetMode,
+  defaultTemplateFor,
+  normalizeWidgetTemplate,
+  modeToTemplateType,
+  parseTemplateId,
+  type WidgetProvider,
+  type WidgetTemplateType,
+} from "@leadpilot/types";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Paintbrush, Code, BarChart3, Cpu, MessageSquare, Mic, Check } from "lucide-react";
+import { Paintbrush, Code, BarChart3, Cpu, Mic, Check } from "lucide-react";
 import { CopySnippet } from "@/components/ui/copy-snippet";
 import { BrandSection } from "@/components/widget-settings/brand-section";
 
 type Tab = "setup" | "appearance" | "snippet" | "analytics";
 type Mode = "chat" | "voice" | "both";
-type Provider = "groq" | "livekit-openai" | "sarvam";
+type Provider = WidgetProvider;
 
 type TemplateDef = {
   value: string;
   name: string;
-  modes: Mode[];
+  type: WidgetTemplateType;
+  style: string;
   comingSoon?: boolean;
 };
 
@@ -80,47 +90,87 @@ const PROVIDERS: {
   },
 ];
 
+function defineTemplates(
+  type: WidgetTemplateType,
+  items: { style: string; name: string; comingSoon?: boolean }[],
+): TemplateDef[] {
+  return items.map((item) => ({
+    value: `${type}-${item.style}`,
+    name: item.name,
+    type,
+    style: item.style,
+    comingSoon: item.comingSoon,
+  }));
+}
+
 const TEMPLATES: TemplateDef[] = [
-  { value: "classic", name: "Classic", modes: ["chat", "both"] },
-  { value: "minimal", name: "Minimal", modes: ["chat"], comingSoon: true },
-  { value: "card", name: "Card", modes: ["chat"], comingSoon: true },
-  { value: "orb", name: "Orb", modes: ["voice", "both"] },
-  { value: "compact-mic", name: "Compact Mic", modes: ["voice"], comingSoon: true },
-  { value: "full-panel", name: "Full Panel", modes: ["voice"], comingSoon: true },
-  { value: "split", name: "Split", modes: ["both"], comingSoon: true },
-  { value: "tabbed", name: "Tabbed", modes: ["both"], comingSoon: true },
-  { value: "unified", name: "Unified", modes: ["both", "chat"] },
+  ...defineTemplates("chatonly", [
+    { style: "classic", name: "Classic" },
+    { style: "modern", name: "Modern" },
+    { style: "minimal", name: "Minimal", comingSoon: true },
+    { style: "card", name: "Card", comingSoon: true },
+    { style: "dock-style", name: "Dock Style" },
+  ]),
+  ...defineTemplates("voiceonly", [
+    { style: "orb", name: "Orb" },
+    { style: "modern", name: "Modern" },
+    { style: "compact-mic", name: "Compact Mic", comingSoon: true },
+    { style: "full-panel", name: "Full Panel", comingSoon: true },
+    { style: "dock-style", name: "Dock Style" },
+  ]),
+  ...defineTemplates("both", [
+    { style: "classic", name: "Classic" },
+    { style: "modern", name: "Modern" },
+    { style: "split", name: "Split", comingSoon: true },
+    { style: "tabbed", name: "Tabbed", comingSoon: true },
+    { style: "dock-style", name: "Dock Style" },
+  ]),
 ];
 
-function TemplatePreview({ value, color: propColor }: { value: string; color?: string }) {
-  const c = propColor ?? "#7C3AED";
+function TemplatePreview({ value }: { value: string; color?: string }) {
+  const { type, style } = parseTemplateId(value);
+  const previewStyle = style ?? value;
 
-  switch (value) {
+  switch (previewStyle) {
     case "classic":
       return (
         <div className="relative w-full h-full bg-slate-50">
           <div className="absolute bottom-1.5 right-1.5 flex flex-col items-end gap-1">
             <div className="w-14 h-9 rounded-lg border bg-white shadow-sm" />
-            <div className="w-5 h-5 rounded-full" style={{ backgroundColor: c }} />
+            <div className="h-5 w-5 rounded-full bg-[var(--preview-brand)]" />
+          </div>
+        </div>
+      );
+    case "modern":
+      return (
+        <div className="relative w-full h-full bg-slate-50 p-2">
+          <div className="w-full h-full rounded-md border bg-white flex flex-col overflow-hidden">
+            <div className="flex-1 p-1">
+              <div className="w-6 h-4 rounded-sm bg-slate-100" />
+            </div>
+            <div className="border-t flex items-center p-1 gap-0.5">
+              <div className="flex-1 h-1.5 rounded-sm bg-slate-100" />
+              <div className="h-2.5 w-2.5 rounded-full bg-[var(--preview-brand)]" />
+            </div>
           </div>
         </div>
       );
     case "minimal":
       return (
         <div className="relative w-full h-full bg-slate-50">
-          <div className="absolute bottom-0 left-1 right-1 h-2 rounded-t-sm" style={{ backgroundColor: c }} />
+          <div className="absolute bottom-0 left-1 right-1 h-2 rounded-t-sm bg-[var(--preview-brand)]" />
         </div>
       );
     case "card":
       return (
         <div className="relative w-full h-full bg-slate-50 p-2">
-          <div className="w-full h-full rounded-md border-2 bg-white shadow-sm" style={{ borderColor: c }} />
+          <div className="h-full w-full rounded-md border-2 border-[var(--preview-brand)] bg-white shadow-sm" />
         </div>
       );
     case "orb":
       return (
         <div className="relative w-full h-full bg-slate-50 flex items-center justify-center">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: c }}>
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--preview-brand)]">
             <div className="w-5 h-5 rounded-full bg-white/30" />
           </div>
         </div>
@@ -128,7 +178,7 @@ function TemplatePreview({ value, color: propColor }: { value: string; color?: s
     case "compact-mic":
       return (
         <div className="relative w-full h-full bg-slate-50">
-          <div className="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: c }}>
+          <div className="absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--preview-brand)]">
             <div className="w-2.5 h-2.5 rounded-full bg-white" />
           </div>
         </div>
@@ -137,8 +187,8 @@ function TemplatePreview({ value, color: propColor }: { value: string; color?: s
       return (
         <div className="relative w-full h-full bg-slate-50 p-2">
           <div className="w-full h-full rounded-md border bg-white p-1.5 flex items-end gap-0.5">
-            {[3, 5, 4, 6, 2, 5, 3].map((h, i) => (
-              <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${h * 3}px`, backgroundColor: c }} />
+            {[3, 5, 4, 6, 2, 5, 3].map((heightClass, i) => (
+              <div key={i} className={cn("flex-1 rounded-t-sm bg-[var(--preview-brand)]", heightClass)} />
             ))}
           </div>
         </div>
@@ -151,7 +201,7 @@ function TemplatePreview({ value, color: propColor }: { value: string; color?: s
               <div className="w-4 h-3 rounded-sm bg-slate-200" />
             </div>
             <div className="w-4 bg-slate-50 flex items-center justify-center border-l">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c }} />
+              <div className="h-2 w-2 rounded-full bg-[var(--preview-brand)]" />
             </div>
           </div>
         </div>
@@ -161,7 +211,7 @@ function TemplatePreview({ value, color: propColor }: { value: string; color?: s
         <div className="relative w-full h-full bg-slate-50 p-2">
           <div className="w-full h-full rounded-md border bg-white flex flex-col overflow-hidden">
             <div className="flex border-b text-[6px]">
-              <div className="flex-1 py-0.5 text-center font-semibold" style={{ color: c }}>Chat</div>
+              <div className="flex-1 py-0.5 text-center font-semibold text-[var(--preview-brand)]">Chat</div>
               <div className="flex-1 py-0.5 text-center text-slate-300">Voice</div>
             </div>
             <div className="flex-1 p-1">
@@ -170,17 +220,44 @@ function TemplatePreview({ value, color: propColor }: { value: string; color?: s
           </div>
         </div>
       );
-    case "unified":
+    case "dock-style":
+      if (type === "voiceonly") {
+        return (
+          <div className="relative flex h-full w-full flex-col items-center justify-end bg-slate-50 p-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--preview-brand)] text-white shadow-sm">
+              <svg width={11} height={11} viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                <path d="M6.5 4h3l1.5 4.5-2 1.2a12 12 0 0 0 5.3 5.3l1.2-2L21.5 14v3a1.5 1.5 0 0 1-1.6 1.5C10.2 18.5 5.5 13.8 5 7.1A1.5 1.5 0 0 1 6.5 4z" />
+              </svg>
+            </div>
+          </div>
+        );
+      }
       return (
-        <div className="relative w-full h-full bg-slate-50 p-2">
-          <div className="w-full h-full rounded-md border bg-white flex flex-col overflow-hidden">
-            <div className="flex-1 p-1">
-              <div className="w-6 h-4 rounded-sm bg-slate-100" />
+        <div className="relative flex h-full w-full flex-col items-center justify-end bg-slate-50 p-2">
+          <div className="flex w-[62%] flex-col items-center gap-0.5">
+            <div className="w-full rounded-lg bg-gradient-to-br from-cyan-300 to-violet-400 p-px shadow-sm">
+              <div className="rounded-lg bg-white p-1">
+                <div className="mx-auto mb-0.5 h-0.5 w-3 rounded-full bg-slate-200" />
+                <div className="mb-0.5 rounded-full bg-gradient-to-r from-cyan-300 to-violet-400 p-px">
+                  <div className="flex h-2.5 items-center rounded-full bg-white px-0.5">
+                    <div className="h-1 w-1 shrink-0 rounded-full bg-cyan-300" />
+                    <div className="mx-0.5 h-0.5 flex-1 rounded-full bg-slate-100" />
+                    <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--preview-brand)]" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-0.5">
+                  <div className="h-1.5 rounded-full bg-slate-100" />
+                  <div className="h-1.5 rounded-full bg-slate-100" />
+                </div>
+              </div>
             </div>
-            <div className="border-t flex items-center p-1 gap-0.5">
-              <div className="flex-1 h-1.5 rounded-sm bg-slate-100" />
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c }} />
-            </div>
+            {type === "both" && (
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--preview-brand)] text-white shadow-sm">
+                <svg width={9} height={9} viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                  <path d="M6.5 4h3l1.5 4.5-2 1.2a12 12 0 0 0 5.3 5.3l1.2-2L21.5 14v3a1.5 1.5 0 0 1-1.6 1.5C10.2 18.5 5.5 13.8 5 7.1A1.5 1.5 0 0 1 6.5 4z" />
+                </svg>
+              </div>
+            )}
           </div>
         </div>
       );
@@ -224,14 +301,26 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   const [botName, setBotName] = useState((widgetConfig?.botName as string) ?? "LeadPilot");
   const [color, setColor] = useState((widgetConfig?.color as string) ?? "#2563eb");
   const [welcomeMessage, setWelcomeMessage] = useState((widgetConfig?.welcomeMessage as string) ?? "");
-  const [provider, setProvider] = useState<Provider>((widgetConfig?.provider as Provider) ?? "groq");
-  const [mode, setMode] = useState<Mode>((widgetConfig?.mode as Mode) ?? "chat");
-  const [template, setTemplate] = useState((widgetConfig?.template as string) ?? "classic");
+  const initialMode = normalizeWidgetMode(widgetConfig?.mode as string) as Mode;
+  const initialProvider = (widgetConfig?.provider as Provider) ?? "groq";
+  const initialType = modeToTemplateType(initialMode);
+  const storedTemplate = widgetConfig?.template as string | undefined;
+  const initialTemplate = storedTemplate
+    ? normalizeWidgetTemplate(storedTemplate, initialMode)
+    : defaultTemplateFor(initialMode);
+
+  const [provider, setProvider] = useState<Provider>(initialProvider);
+  const [mode, setMode] = useState<Mode>(initialMode);
+  const [template, setTemplate] = useState(initialTemplate);
+  const templateSelections = useRef<Record<string, string>>({
+    [initialType]: initialTemplate,
+  });
   const [logoUrl, setLogoUrl] = useState(((widgetConfig?.brand as Record<string, unknown>)?.logoUrl as string) ?? "");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const isProviderGroq = provider === "groq";
+  const templateType = modeToTemplateType(mode);
 
   useEffect(() => {
     if (isProviderGroq && mode !== "chat") {
@@ -244,14 +333,31 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
     [provider],
   );
 
-  const validTemplates = useMemo(() => TEMPLATES.filter((t) => t.modes.includes(mode)), [mode]);
+  const validTemplates = useMemo(
+    () => TEMPLATES.filter((t) => t.type === templateType),
+    [templateType],
+  );
 
   useEffect(() => {
-    const isValid = validTemplates.some((t) => t.value === template);
-    if (!isValid && validTemplates.length > 0) {
-      setTemplate(validTemplates[0].value);
+    const saved = templateSelections.current[templateType];
+    const isValid = saved && validTemplates.some((t) => t.value === saved);
+
+    if (isValid) {
+      setTemplate(saved);
+      return;
     }
-  }, [mode]);
+
+    const isCurrentValid = validTemplates.some((t) => t.value === template);
+    if (!isCurrentValid && validTemplates.length > 0) {
+      const fallback = validTemplates.find((t) => !t.comingSoon)?.value ?? validTemplates[0].value;
+      setTemplate(fallback);
+      templateSelections.current[templateType] = fallback;
+    }
+  }, [templateType, validTemplates]);
+
+  useEffect(() => {
+    templateSelections.current[templateType] = template;
+  }, [template, templateType]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -271,7 +377,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             color,
             welcomeMessage,
             provider,
-            mode,
+            mode: normalizeWidgetMode(mode),
             template,
             ...(brandPayload !== undefined ? { brand: brandPayload } : {}),
           },
@@ -417,20 +523,29 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
 
           <div className="space-y-3">
             <Label className="text-base">Choose Template</Label>
+            <p className="text-xs text-slate-500">
+              Templates for{" "}
+              <span className="font-medium text-slate-700">
+                {MODES.find((m) => m.value === mode)?.label ?? mode}
+              </span>
+              <span className="ml-1 font-mono text-slate-400">({templateType}-*)</span>
+            </p>
             <div className="grid grid-cols-3 gap-4">
               {validTemplates.map((t) => (
                 <button
                   key={t.value}
                   type="button"
-                  onClick={() => setTemplate(t.value)}
+                  onClick={() => !t.comingSoon && setTemplate(t.value)}
+                  disabled={t.comingSoon}
                   className={cn(
                     "rounded-lg border-2 overflow-hidden transition-colors",
+                    t.comingSoon && "opacity-60 cursor-not-allowed",
                     template === t.value
                       ? "border-violet-600 ring-1 ring-violet-600"
                       : "border-slate-200 hover:border-slate-300",
                   )}
                 >
-                  <div className="relative h-40">
+                  <div className="relative h-40" style={{ "--preview-brand": color } as React.CSSProperties}>
                     <TemplatePreview value={t.value} color={color} />
                     {t.comingSoon && (
                       <div className="absolute top-1 right-1 bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded font-medium">

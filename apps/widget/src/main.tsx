@@ -1,7 +1,18 @@
 import { Room, RoomEvent, createLocalAudioTrack } from "livekit-client";
 import React, { Component, type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import type { ApiResponse, ChatResponse, ConversationStartResponse, WidgetConfigResponse, WidgetConfig } from "@leadpilot/types";
+import {
+  getWidgetModeFlags,
+  isDockStyleTemplate,
+  normalizeWidgetMode,
+  type ApiResponse,
+  type ChatResponse,
+  type ConversationStartResponse,
+  type WidgetConfig,
+  type WidgetConfigResponse,
+  type WidgetMode,
+} from "@leadpilot/types";
+import { BlastWidget, getBlastStyles } from "./dock-style";
 
 type MountOptions = {
   root: ShadowRoot | HTMLElement;
@@ -252,12 +263,24 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  function getWelcomeMessages(cfg: WidgetConfig): ChatMessage[] {
+    if (normalizeWidgetMode(cfg.mode) === "voice") return [];
+    return [
+      {
+        id: "welcome",
+        role: "assistant",
+        content: cfg.welcomeMessage || "Hi! How can I help you Today?",
+        createdAt: new Date(),
+      },
+    ];
+  }
+
   useEffect(() => {
     requestJson<WidgetConfigResponse>(`${apiUrl}/api/widget/config?clientId=${encodeURIComponent(clientId)}`)
       .then((data) => {
         setConfig(data.config);
         setConfigLoading(false);
-        setMessages([{ id: "welcome", role: "assistant", content: data.config.welcomeMessage || "Hi! How can I help you Today?", createdAt: new Date() }]);
+        setMessages(getWelcomeMessages(data.config));
       })
       .catch((caught: unknown) => {
         setConfigLoading(false);
@@ -272,14 +295,16 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
   }, [messages, status, configLoading]);
 
   useEffect(() => {
-    if (status === "open" && textareaRef.current) {
+    if (status === "open" && textareaRef.current && normalizeWidgetMode(config?.mode) !== "voice") {
       textareaRef.current.focus();
     }
-  }, [status, conversationId]);
+  }, [status, conversationId, config?.mode]);
 
   async function openWidget() {
     setStatus("open");
-    if (conversationId || !config) return;
+    if (!config) return;
+    if (normalizeWidgetMode(config.mode) === "voice") return;
+    if (conversationId) return;
 
     try {
       const data = await requestJson<ConversationStartResponse>(`${apiUrl}/api/widget/conversation/start`, {
@@ -365,7 +390,7 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
         const data = await requestJson<WidgetConfigResponse>(`${apiUrl}/api/widget/config?clientId=${encodeURIComponent(clientId)}`);
         setConfig(data.config);
         setConfigLoading(false);
-        setMessages([{ id: "welcome", role: "assistant", content: data.config.welcomeMessage, createdAt: new Date() }]);
+        setMessages(getWelcomeMessages(data.config));
         setStatus("open");
       } catch (caught) {
         setConfigLoading(false);
@@ -501,8 +526,11 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
     );
   }
 
-  const mode = config?.mode ?? "chat";
+  const mode: WidgetMode = normalizeWidgetMode(config?.mode);
+  const { showChat: showChatUI } = getWidgetModeFlags(mode);
   const activeColor = config?.color ?? "#2563eb";
+  const template = config?.template ?? "chatonly-classic";
+  const isDockStyle = isDockStyleTemplate(template);
   const canSend = !!(draft.trim() && conversationId && status !== "loading");
   const isFormDisabled = status === "loading" || !conversationId;
 
@@ -622,6 +650,42 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
           </div>
         )}
       </form>
+    );
+  }
+
+  if (isDockStyle) {
+    return (
+      <>
+        <style>{getBlastStyles(activeColor)}</style>
+        <BlastWidget
+          botName={config?.botName ?? "LeadPilot"}
+          color={activeColor}
+          status={status}
+          mode={mode}
+          messages={messages}
+          draft={draft}
+          conversationId={conversationId}
+          canSend={canSend}
+          isFormDisabled={isFormDisabled}
+          isLoading={status === "loading"}
+          showCtas={showWelcome && showChatUI}
+          voiceState={voiceState}
+          error={error}
+          errorType={errorType}
+          textareaRef={textareaRef}
+          scrollRef={scrollRef}
+          bottomRef={bottomRef}
+          onOpen={openWidget}
+          onCollapse={() => setStatus("collapsed")}
+          onSubmit={handleSubmit}
+          onInputChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onSuggestion={handleSuggestion}
+          onRetry={handleRetry}
+          onStartCall={startVoiceCall}
+          onEndCall={endVoiceCall}
+        />
+      </>
     );
   }
 
