@@ -2,6 +2,7 @@ import { getSharedPrismaClient } from "@/lib/prisma";
 import { crawlUrl } from "@/lib/crawler";
 import { chunkText, cleanText } from "@/lib/chunker";
 import { generateEmbedding } from "@/lib/embeddings";
+import { extractBrand } from "@/lib/brand-extract";
 import { logger } from "@/lib/logger";
 
 export async function ingestUrlForProject({
@@ -69,5 +70,42 @@ export async function ingestUrlForProject({
         data: { status: "FAILED" },
       });
     } catch {}
+  }
+}
+
+export async function extractBrandForProject({
+  projectId,
+  url,
+}: {
+  projectId: string;
+  url: string;
+}): Promise<void> {
+  try {
+    const prisma = getSharedPrismaClient();
+    const result = await extractBrand(url);
+    if (!result || result.colors.length === 0) return;
+
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { widgetConfig: true },
+    });
+    if (!project) return;
+
+    const existing = (project.widgetConfig ?? {}) as Record<string, unknown>;
+    existing.brand = {
+      colors: result.colors,
+      logoUrl: result.logoUrl,
+      extractedAt: new Date().toISOString(),
+    };
+    if (!existing.color) {
+      existing.color = result.colors[0];
+    }
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { widgetConfig: existing as any },
+    });
+  } catch (error) {
+    logger.error(error);
   }
 }

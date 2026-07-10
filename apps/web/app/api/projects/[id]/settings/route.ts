@@ -12,6 +12,7 @@ const bodySchema = z.object({
     welcomeMessage: z.string().trim().optional(),
     mode: z.enum(["chat", "voice", "both"]).optional(),
     provider: z.enum(["groq", "livekit-openai", "sarvam"]).optional(),
+    brand: z.any().optional(),
   }).optional(),
 });
 
@@ -88,6 +89,7 @@ export async function PUT(
     if (updates.mode !== undefined) newWidgetConfig.mode = updates.mode;
     if (updates.provider !== undefined) newWidgetConfig.provider = updates.provider;
     else newWidgetConfig.provider = newWidgetConfig.provider ?? "groq";
+    if (updates.brand !== undefined) newWidgetConfig.brand = updates.brand;
 
     const updated = await prisma.project.update({
       where: { id: project.id },

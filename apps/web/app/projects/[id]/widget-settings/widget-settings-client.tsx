@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Paintbrush, Code, BarChart3, Cpu, MessageSquare, Mic, Check } from "lucide-react";
 import { CopySnippet } from "@/components/ui/copy-snippet";
+import { BrandSection } from "@/components/widget-settings/brand-section";
 
 type Tab = "setup" | "appearance" | "snippet" | "analytics";
 type Mode = "chat" | "voice" | "both";
@@ -226,6 +227,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   const [provider, setProvider] = useState<Provider>((widgetConfig?.provider as Provider) ?? "groq");
   const [mode, setMode] = useState<Mode>((widgetConfig?.mode as Mode) ?? "chat");
   const [template, setTemplate] = useState((widgetConfig?.template as string) ?? "classic");
+  const [logoUrl, setLogoUrl] = useState(((widgetConfig?.brand as Record<string, unknown>)?.logoUrl as string) ?? "");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -256,6 +258,10 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
     setSaving(true);
     setToast(null);
     try {
+      const brandPayload = brandData
+        ? { ...brandData, logoUrl: logoUrl || null }
+        : undefined;
+
       const res = await fetch(`/api/projects/${projectId}/settings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -267,6 +273,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             provider,
             mode,
             template,
+            ...(brandPayload !== undefined ? { brand: brandPayload } : {}),
           },
         }),
       });
@@ -283,6 +290,16 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
       setSaving(false);
     }
   }
+
+  const brandData = useMemo(() => {
+    const b = widgetConfig?.brand as Record<string, unknown> | undefined;
+    if (!b || (typeof b === "object" && Object.keys(b).length === 0)) return null;
+    return {
+      colors: (b.colors as string[]) ?? [],
+      logoUrl: (b.logoUrl as string | null) ?? null,
+      extractedAt: (b.extractedAt as string) ?? undefined,
+    };
+  }, [widgetConfig]);
 
   const snippets = snippetPlatforms.map(
     ([label, snippet]) => [label, snippet.replace(/##CLIENT_ID##/g, clientId)] as [string, string],
@@ -487,6 +504,13 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
               placeholder="Hi! How can I help you today?"
             />
           </div>
+
+          <BrandSection
+            brand={brandData}
+            color={color}
+            onColorChange={setColor}
+            onLogoUrlChange={(url) => setLogoUrl(url)}
+          />
 
           {toast && (
             <p

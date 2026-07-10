@@ -4,7 +4,7 @@ import { corsHeaders, fail, ok } from "@/lib/api-response";
 import { createClient } from "@/lib/supabase/server";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { createProject } from "@/lib/widget-store";
-import { ingestUrlForProject } from "@/lib/knowledge-ingest";
+import { ingestUrlForProject, extractBrandForProject } from "@/lib/knowledge-ingest";
 import { waitUntil } from "@vercel/functions";
 import { logger } from "@/lib/logger";
 
@@ -119,6 +119,17 @@ export async function POST(request: Request) {
           waitUntil(job);
         } catch {
           void job;
+        }
+
+        const brandJob = extractBrandForProject({
+          projectId: project.id,
+          url: siteUrl,
+        });
+
+        try {
+          waitUntil(brandJob);
+        } catch {
+          void brandJob;
         }
       } catch {
         // Silently skip ingestion on any setup error
