@@ -120,7 +120,7 @@ function styles(color: string) {
     .lp-launcher:hover { transform: translateY(-2px); box-shadow: 0 22px 50px rgba(15, 23, 42, 0.28); }
     .lp-launcher:focus-visible { outline: 3px solid ${color}; outline-offset: 3px; }
 
-    .lp-panel { width: min(380px, calc(100vw - 32px)); height: min(620px, calc(100vh - 32px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(15, 23, 42, 0.12); border-radius: 18px; background: #fff; box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22); animation: lp-pop 180ms ease-out; }
+    .lp-panel { width: min(440px, calc(100vw - 32px)); height: min(620px, calc(100vh - 32px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(15, 23, 42, 0.12); border-radius: 18px; background: #fff; box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22); animation: lp-pop 180ms ease-out; }
 
     .lp-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; background: ${color}; color: #fff; flex-shrink: 0; }
     .lp-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -133,7 +133,8 @@ function styles(color: string) {
     .lp-close:hover { background: rgba(255,255,255,0.28); }
     .lp-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
-    .lp-messages { flex: 1; overflow-y: auto; padding: 16px; background: #f8fafc; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+    .lp-messages { flex: 1; overflow-y: auto; padding: 16px; background: #f8fafc; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; }
+    .lp-messages::-webkit-scrollbar { width: 0; height: 0; display: none; }
     .lp-message-wrap { animation: lp-fade-in 250ms ease-out both; }
     .lp-bubble { max-width: 82%; margin: 0 0 10px; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
     .lp-user { margin-left: auto; background: ${color}; color: #fff; border-bottom-right-radius: 4px; }
@@ -466,6 +467,11 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
   const hasUserMessages = messages.some((m) => m.role === "user");
   const showWelcome = messages.length > 0 && !hasUserMessages && showSuggestions && status !== "loading";
 
+  // Wait for /api/widget/config — do not render a default template before success.
+  if (configLoading || !config) {
+    return null;
+  }
+
   function renderMessages() {
     if (configLoading && status === "open") {
       return <LoadingSkeleton />;
@@ -658,7 +664,7 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
       <>
         <style>{getBlastStyles(activeColor)}</style>
         <BlastWidget
-          botName={config?.botName ?? "LeadPilot"}
+          botName={config.botName ?? "LeadPilot"}
           color={activeColor}
           status={status}
           mode={mode}
@@ -703,9 +709,9 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
           <section aria-label="LeadPilot chat" className="lp-panel" role="dialog" aria-modal="true">
             <header className="lp-header">
               <div className="lp-identity">
-                <div className="lp-avatar" aria-hidden="true">{config?.botName.charAt(0) ?? "L"}</div>
+                <div className="lp-avatar" aria-hidden="true">{config.botName.charAt(0) ?? "L"}</div>
                 <div>
-                  <p className="lp-name">{config?.botName ?? "LeadPilot"}</p>
+                  <p className="lp-name">{config.botName ?? "LeadPilot"}</p>
                   <p className="lp-subtitle">
                     <span className="lp-online">
                       <span className="lp-dot" aria-hidden="true" />

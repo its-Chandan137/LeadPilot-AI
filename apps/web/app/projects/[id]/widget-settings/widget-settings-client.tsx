@@ -103,41 +103,69 @@ function defineTemplates(
   }));
 }
 
+function defineTemplates(
+  type: WidgetTemplateType,
+  items: { style: string; name: string; comingSoon?: boolean }[],
+): TemplateDef[] {
+  return items.map((item) => ({
+    value: `${type}-${item.style}`,
+    name: item.name,
+    type,
+    style: item.style,
+    comingSoon: item.comingSoon,
+  }));
+}
+
 const TEMPLATES: TemplateDef[] = [
   ...defineTemplates("chatonly", [
     { style: "classic", name: "Classic" },
+    { style: "dock-style", name: "Dock Style" },
     { style: "modern", name: "Modern" },
     { style: "minimal", name: "Minimal", comingSoon: true },
     { style: "card", name: "Card", comingSoon: true },
-    { style: "dock-style", name: "Dock Style" },
+    
   ]),
   ...defineTemplates("voiceonly", [
-    { style: "orb", name: "Orb" },
-    { style: "modern", name: "Modern" },
-    { style: "compact-mic", name: "Compact Mic", comingSoon: true },
-    { style: "full-panel", name: "Full Panel", comingSoon: true },
+    { style: "classic", name: "Classic" },
     { style: "dock-style", name: "Dock Style" },
+    { style: "modern", name: "Modern" },
+    { style: "minimal", name: "Minimal", comingSoon: true },
+    { style: "card", name: "Card", comingSoon: true },
+    
   ]),
   ...defineTemplates("both", [
     { style: "classic", name: "Classic" },
+    { style: "dock-style", name: "Dock Style" },
     { style: "modern", name: "Modern" },
     { style: "split", name: "Split", comingSoon: true },
     { style: "tabbed", name: "Tabbed", comingSoon: true },
-    { style: "dock-style", name: "Dock Style" },
+   
   ]),
 ];
+
+function PhoneGlyph({ size = 11 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="white" aria-hidden="true">
+      <path d="M6.5 4h3l1.5 4.5-2 1.2a12 12 0 0 0 5.3 5.3l1.2-2L21.5 14v3a1.5 1.5 0 0 1-1.6 1.5C10.2 18.5 5.5 13.8 5 7.1A1.5 1.5 0 0 1 6.5 4z" />
+    </svg>
+  );
+}
 
 function TemplatePreview({ value }: { value: string; color?: string }) {
   const { type, style } = parseTemplateId(value);
   const previewStyle = style ?? value;
+  const isVoice = type === "voiceonly";
+  const isBoth = type === "both";
 
   switch (previewStyle) {
     case "classic":
       return (
         <div className="relative w-full h-full bg-slate-50">
           <div className="absolute bottom-1.5 right-1.5 flex flex-col items-end gap-1">
-            <div className="w-14 h-9 rounded-lg border bg-white shadow-sm" />
-            <div className="h-5 w-5 rounded-full bg-[var(--preview-brand)]" />
+            {!isVoice && <div className="w-14 h-9 rounded-lg border bg-white shadow-sm" />}
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--preview-brand)]">
+              {isVoice ? <PhoneGlyph size={9} /> : null}
+            </div>
           </div>
         </div>
       );
@@ -146,11 +174,19 @@ function TemplatePreview({ value }: { value: string; color?: string }) {
         <div className="relative w-full h-full bg-slate-50 p-2">
           <div className="w-full h-full rounded-md border bg-white flex flex-col overflow-hidden">
             <div className="flex-1 p-1">
-              <div className="w-6 h-4 rounded-sm bg-slate-100" />
+              {!isVoice && <div className="w-6 h-4 rounded-sm bg-slate-100" />}
             </div>
-            <div className="border-t flex items-center p-1 gap-0.5">
-              <div className="flex-1 h-1.5 rounded-sm bg-slate-100" />
-              <div className="h-2.5 w-2.5 rounded-full bg-[var(--preview-brand)]" />
+            <div className="border-t flex items-center justify-center p-1 gap-0.5">
+              {isVoice ? (
+                <div className="flex h-3 w-3 items-center justify-center rounded-full bg-[var(--preview-brand)]">
+                  <PhoneGlyph size={7} />
+                </div>
+              ) : (
+                <>
+                  <div className="flex-1 h-1.5 rounded-sm bg-slate-100" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-[var(--preview-brand)]" />
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -165,32 +201,6 @@ function TemplatePreview({ value }: { value: string; color?: string }) {
       return (
         <div className="relative w-full h-full bg-slate-50 p-2">
           <div className="h-full w-full rounded-md border-2 border-[var(--preview-brand)] bg-white shadow-sm" />
-        </div>
-      );
-    case "orb":
-      return (
-        <div className="relative w-full h-full bg-slate-50 flex items-center justify-center">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--preview-brand)]">
-            <div className="w-5 h-5 rounded-full bg-white/30" />
-          </div>
-        </div>
-      );
-    case "compact-mic":
-      return (
-        <div className="relative w-full h-full bg-slate-50">
-          <div className="absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--preview-brand)]">
-            <div className="w-2.5 h-2.5 rounded-full bg-white" />
-          </div>
-        </div>
-      );
-    case "full-panel":
-      return (
-        <div className="relative w-full h-full bg-slate-50 p-2">
-          <div className="w-full h-full rounded-md border bg-white p-1.5 flex items-end gap-0.5">
-            {[3, 5, 4, 6, 2, 5, 3].map((heightClass, i) => (
-              <div key={i} className={cn("flex-1 rounded-t-sm bg-[var(--preview-brand)]", heightClass)} />
-            ))}
-          </div>
         </div>
       );
     case "split":
@@ -221,34 +231,43 @@ function TemplatePreview({ value }: { value: string; color?: string }) {
         </div>
       );
     case "dock-style":
-      if (type === "voiceonly") {
-        return (
-          <div className="relative flex h-full w-full flex-col items-center justify-end bg-slate-50 p-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--preview-brand)] text-white shadow-sm">
-              <svg width={11} height={11} viewBox="0 0 24 24" fill="white" aria-hidden="true">
-                <path d="M6.5 4h3l1.5 4.5-2 1.2a12 12 0 0 0 5.3 5.3l1.2-2L21.5 14v3a1.5 1.5 0 0 1-1.6 1.5C10.2 18.5 5.5 13.8 5 7.1A1.5 1.5 0 0 1 6.5 4z" />
-              </svg>
-            </div>
-          </div>
-        );
-      }
+      // Same dock shell as chat; voice-only drops the input/CTAs and keeps the phone.
       return (
         <div className="relative flex h-full w-full flex-col items-center justify-end bg-slate-50 p-2">
-          <div className="flex w-[62%] flex-col items-center gap-0.5">
+          <div className="flex w-[70%] flex-col items-center gap-0.5">
             <div className="w-full rounded-lg bg-gradient-to-br from-cyan-300 to-violet-400 p-px shadow-sm">
               <div className="rounded-lg bg-white p-1">
                 <div className="mx-auto mb-0.5 h-0.5 w-3 rounded-full bg-slate-200" />
-                <div className="mb-0.5 rounded-full bg-gradient-to-r from-cyan-300 to-violet-400 p-px">
-                  <div className="flex h-2.5 items-center rounded-full bg-white px-0.5">
-                    <div className="h-1 w-1 shrink-0 rounded-full bg-cyan-300" />
-                    <div className="mx-0.5 h-0.5 flex-1 rounded-full bg-slate-100" />
-                    <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--preview-brand)]" />
+                {isVoice ? (
+                  <div className="flex items-center justify-center py-0.5">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--preview-brand)] shadow-sm">
+                      <PhoneGlyph size={9} />
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-0.5">
-                  <div className="h-1.5 rounded-full bg-slate-100" />
-                  <div className="h-1.5 rounded-full bg-slate-100" />
-                </div>
+                ) : (
+                  <>
+                    <div className="mb-0.5 flex items-center gap-0.5">
+                      <div className="min-w-0 flex-1 rounded-full bg-gradient-to-r from-cyan-300 to-violet-400 p-px">
+                        <div className="flex h-2.5 items-center rounded-full bg-white px-0.5">
+                          <div className="h-1 w-1 shrink-0 rounded-full bg-cyan-300" />
+                          <div className="mx-0.5 h-0.5 flex-1 rounded-full bg-slate-100" />
+                          <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--preview-brand)]" />
+                        </div>
+                      </div>
+                      {isBoth && (
+                        <div className="flex h-2.5 w-2.5 shrink-0 items-center justify-center rounded-full bg-[var(--preview-brand)]">
+                          <PhoneGlyph size={7} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-0.5">
+                      <div className="h-1.5 rounded-full bg-slate-100" />
+                      <div className="h-1.5 rounded-full bg-slate-100" />
+                      <div className="h-1.5 rounded-full bg-slate-100" />
+                      <div className="h-1.5 rounded-full bg-slate-100" />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             {type === "both" && (
@@ -425,11 +444,10 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.key
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.key
                   ? "border-[#7C3AED] text-[#7C3AED]"
                   : "border-transparent text-[#6B7280] hover:text-[#111827]"
-              }`}
+                }`}
             >
               <Icon className="w-4 h-4" />
               {tab.label}
