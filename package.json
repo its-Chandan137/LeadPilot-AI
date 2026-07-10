@@ -16,7 +16,7 @@
     "db:seed": "npm --workspace apps/web run db:seed"
   },
   "devDependencies": {
-    "turbo": "^2.10.0",
+    "turbo": "^2.10.4",
     "typescript": "^5.5.4"
   },
   "dependencies": {
