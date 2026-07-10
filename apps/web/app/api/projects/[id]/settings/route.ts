@@ -15,6 +15,11 @@ const bodySchema = z.object({
   }).optional(),
 });
 
+const settingsBodySchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  siteUrl: z.string().trim().optional(),
+});
+
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders() });
 }
@@ -93,5 +98,47 @@ export async function PUT(
   } catch (error) {
     logger.error(error);
     return fail("Unable to update settings", 500);
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = createClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user?.id) return fail("You must be signed in.", 401);
+
+    const parsed = settingsBodySchema.safeParse(await request.json());
+    if (!parsed.success) return fail("Invalid settings payload");
+
+    const prisma = getSharedPrismaClient();
+    const membership = await prisma.workspaceMember.findFirst({
+      where: { userId: user.id },
+      select: { workspaceId: true },
+    });
+    if (!membership) return fail("Workspace not found.", 404);
+
+    const project = await prisma.project.findFirst({
+      where: { id: params.id, workspaceId: membership.workspaceId },
+      select: { id: true },
+    });
+    if (!project) return fail("Project not found.", 404);
+
+    const data: Record<string, string> = {};
+    if (parsed.data.name !== undefined) data.name = parsed.data.name;
+    if (parsed.data.siteUrl !== undefined) data.siteUrl = parsed.data.siteUrl;
+
+    const updated = await prisma.project.update({
+      where: { id: project.id },
+      data,
+      select: { id: true, name: true, siteUrl: true },
+    });
+
+    return ok({ project: updated });
+  } catch (error) {
+    logger.error(error);
+    return fail("Unable to update project settings", 500);
   }
 }
