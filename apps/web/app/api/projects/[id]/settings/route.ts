@@ -11,6 +11,7 @@ const bodySchema = z.object({
     color: z.string().trim().optional(),
     welcomeMessage: z.string().trim().optional(),
     mode: z.enum(["chat", "voice", "both"]).optional(),
+    template: z.string().trim().optional(),
     provider: z.enum(["groq", "livekit-openai", "sarvam"]).optional(),
     brand: z.any().optional(),
   }).optional(),
@@ -87,6 +88,7 @@ export async function PUT(
     if (updates.color !== undefined) newWidgetConfig.color = updates.color;
     if (updates.welcomeMessage !== undefined) newWidgetConfig.welcomeMessage = updates.welcomeMessage;
     if (updates.mode !== undefined) newWidgetConfig.mode = updates.mode;
+    if (updates.template !== undefined) newWidgetConfig.template = updates.template;
     if (updates.provider !== undefined) newWidgetConfig.provider = updates.provider;
     else newWidgetConfig.provider = newWidgetConfig.provider ?? "groq";
     if (updates.brand !== undefined) newWidgetConfig.brand = updates.brand;
