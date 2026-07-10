@@ -55,15 +55,15 @@ export default function NewProjectPage() {
           />
         </label>
         <label className="block text-sm font-medium">
-          Site URL
+          Website URL (optional)
           <input
             className="mt-2 w-full rounded-md border px-3 py-2"
-            placeholder="https://example.com"
+            placeholder="https://yourcompany.com"
             value={siteUrl}
             onChange={(e) => setSiteUrl(e.target.value)}
-            required
           />
         </label>
+        <p className="text-xs text-slate-500 -mt-3">We'll automatically train your AI on your website content.</p>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           className="rounded-md bg-slate-950 px-4 py-2 text-sm text-white disabled:opacity-50"
