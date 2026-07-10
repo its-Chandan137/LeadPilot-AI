@@ -3,10 +3,13 @@ import { z } from "zod";
 import Groq from "groq-sdk";
 import { corsHeaders, fail, ok } from "@/lib/api-response";
 import { findProjectByClientId, saveChatTurn } from "@/lib/widget-store";
+import { isOriginAllowed } from "@/lib/validate-origin";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { retrieveRelevantChunks } from "@/lib/retrieval";
 import { logger } from "@/lib/logger";
 import { extractLeadInfo, hasLeadData } from "@/lib/lead-extractor";
+
+export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   clientId: z.string().min(1),
@@ -75,6 +78,13 @@ export async function POST(request: Request) {
     let reply: string;
 
     if (project) {
+      const origin = request.headers.get("origin");
+      const referer = request.headers.get("referer");
+
+      if (!isOriginAllowed(origin, referer, project.siteUrl)) {
+        return fail("Widget is not authorized for this domain", 403);
+      }
+
       try {
         const prisma = getSharedPrismaClient();
         const chunkCount = await prisma.knowledgeChunk.count({

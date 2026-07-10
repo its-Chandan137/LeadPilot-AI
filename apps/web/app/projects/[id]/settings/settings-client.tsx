@@ -221,6 +221,7 @@ export function SettingsClient({ project }: Props) {
                 <Input
                   value={urlDraft}
                   onChange={(e) => setUrlDraft(e.target.value)}
+                  placeholder="https://yoursite.com"
                   className="max-w-xs"
                 />
                 <button
@@ -249,6 +250,9 @@ export function SettingsClient({ project }: Props) {
                 </button>
               </div>
             )}
+            <p className="text-xs text-slate-400 mt-1">
+              Enter your website domain only — e.g. https://yoursite.com or http://localhost:5501
+            </p>
             {urlError && (
               <p className="mt-1 text-sm text-red-600">{urlError}</p>
             )}

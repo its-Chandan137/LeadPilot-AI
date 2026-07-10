@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { corsHeaders, fail, ok } from "@/lib/api-response";
 import { findProjectByClientId, toWidgetConfig } from "@/lib/widget-store";
+import { isOriginAllowed } from "@/lib/validate-origin";
 import { logger } from "@/lib/logger";
+
+export const dynamic = "force-dynamic";
 
 const querySchema = z.object({
   clientId: z.string().min(1)
@@ -48,6 +51,13 @@ export async function GET(request: Request) {
           livekitUrl
         }
       });
+    }
+
+    const origin = request.headers.get("origin");
+    const referer = request.headers.get("referer");
+
+    if (!isOriginAllowed(origin, referer, project.siteUrl)) {
+      return fail("Widget is not authorized for this domain", 403);
     }
 
     const config = toWidgetConfig(project);
