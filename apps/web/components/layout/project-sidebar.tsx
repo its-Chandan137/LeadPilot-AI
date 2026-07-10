@@ -15,6 +15,7 @@ import {
   LogOut,
   Search,
   ChevronDown,
+  Settings,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { CollapsibleSidebar, useSidebar } from "./collapsible-sidebar";
@@ -53,6 +54,7 @@ export function ProjectSidebar({ workspaceName, userName, projectId, projectName
     { href: `${baseHref}/knowledge-base`, label: "Knowledge Base", icon: BookOpen },
     { href: `${baseHref}/widget-settings`, label: "Widget Settings", icon: Settings2 },
     { href: `${baseHref}/analytics`, label: "Analytics", icon: BarChart3, comingSoon: true },
+    { href: `${baseHref}/settings`, label: "Settings", icon: Settings },
   ];
 
   return (

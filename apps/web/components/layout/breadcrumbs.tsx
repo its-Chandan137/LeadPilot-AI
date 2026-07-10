@@ -18,6 +18,7 @@ const segmentLabels: Record<string, string> = {
   "knowledge-base": "Knowledge Base",
   "widget-settings": "Widget Settings",
   analytics: "Analytics",
+  settings: "Settings",
 };
 
 export function Breadcrumbs({ projectName }: BreadcrumbsProps) {

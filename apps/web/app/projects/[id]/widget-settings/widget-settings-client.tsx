@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -215,7 +216,10 @@ const snippetPlatforms: [string, string][] = [
 ];
 
 export function WidgetSettingsClient({ projectId, projectName, clientId, widgetConfig, apiUrl }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>("setup");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const initialTab: Tab = tabParam === "snippet" || tabParam === "appearance" || tabParam === "analytics" ? tabParam : "setup";
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [botName, setBotName] = useState((widgetConfig?.botName as string) ?? "LeadPilot");
   const [color, setColor] = useState((widgetConfig?.color as string) ?? "#2563eb");
   const [welcomeMessage, setWelcomeMessage] = useState((widgetConfig?.welcomeMessage as string) ?? "");
