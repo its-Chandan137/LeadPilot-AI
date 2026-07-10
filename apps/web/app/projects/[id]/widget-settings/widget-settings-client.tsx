@@ -103,18 +103,6 @@ function defineTemplates(
   }));
 }
 
-function defineTemplates(
-  type: WidgetTemplateType,
-  items: { style: string; name: string; comingSoon?: boolean }[],
-): TemplateDef[] {
-  return items.map((item) => ({
-    value: `${type}-${item.style}`,
-    name: item.name,
-    type,
-    style: item.style,
-    comingSoon: item.comingSoon,
-  }));
-}
 
 const TEMPLATES: TemplateDef[] = [
   ...defineTemplates("chatonly", [
