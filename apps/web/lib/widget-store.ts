@@ -224,14 +224,19 @@ export async function createProject(input: {
   return project;
 }
 
-export async function listProjects() {
+export async function listProjects(workspaceId?: string | null) {
   const prisma = getPrisma();
 
   if (!prisma) {
     return [demoProject];
   }
 
+  if (!workspaceId) {
+    return [];
+  }
+
   return prisma.project.findMany({
+    where: { workspaceId },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
