@@ -108,6 +108,7 @@ function defineTemplates(
 const TEMPLATES: TemplateDef[] = [
   ...defineTemplates("chatonly", [
     { style: "classic", name: "Classic" },
+    { style: "fusion", name: "Fusion" },
     { style: "dock-style", name: "Dock Style" },
     { style: "modern", name: "Modern" },
     { style: "minimal", name: "Minimal", comingSoon: true },
@@ -117,6 +118,7 @@ const TEMPLATES: TemplateDef[] = [
   ...defineTemplates("voiceonly", [
     { style: "classic", name: "Classic" },
     { style: "dock-style", name: "Dock Style" },
+    { style: "fusion", name: "Fusion" },
     { style: "modern", name: "Modern" },
     { style: "minimal", name: "Minimal", comingSoon: true },
     { style: "card", name: "Card", comingSoon: true },
@@ -125,6 +127,7 @@ const TEMPLATES: TemplateDef[] = [
   ...defineTemplates("both", [
     { style: "classic", name: "Classic" },
     { style: "dock-style", name: "Dock Style" },
+    { style: "fusion", name: "Fusion" },
     { style: "modern", name: "Modern" },
     { style: "split", name: "Split", comingSoon: true },
     { style: "tabbed", name: "Tabbed", comingSoon: true },
@@ -136,6 +139,40 @@ function PhoneGlyph({ size = 11 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="white" aria-hidden="true">
       <path d="M6.5 4h3l1.5 4.5-2 1.2a12 12 0 0 0 5.3 5.3l1.2-2L21.5 14v3a1.5 1.5 0 0 1-1.6 1.5C10.2 18.5 5.5 13.8 5 7.1A1.5 1.5 0 0 1 6.5 4z" />
+    </svg>
+  );
+}
+function MicGlyph({ size = 11 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"
+        fill="white"
+      />
+      <path
+        d="M19 11a7 7 0 0 1-14 0"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 18v3"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9 21h6"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -259,14 +296,42 @@ function TemplatePreview({ value }: { value: string; color?: string }) {
                 )}
               </div>
             </div>
-            {type === "both" && (
+            {/* {type === "both" && (
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--preview-brand)] text-white shadow-sm">
                 <svg width={9} height={9} viewBox="0 0 24 24" fill="white" aria-hidden="true">
                   <path d="M6.5 4h3l1.5 4.5-2 1.2a12 12 0 0 0 5.3 5.3l1.2-2L21.5 14v3a1.5 1.5 0 0 1-1.6 1.5C10.2 18.5 5.5 13.8 5 7.1A1.5 1.5 0 0 1 6.5 4z" />
                 </svg>
               </div>
-            )}
+            )} */}
           </div>
+        </div>
+      );
+    case "fusion":
+      return (
+        <div className="relative w-full h-full bg-slate-50 flex items-end justify-center p-2">
+          {isVoice ? (
+            // Voice Only
+            <div className="flex items-center justify-center w-[30%] rounded-full border border-slate-200 bg-white shadow-sm px-2 py-1">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--preview-brand)]">
+                <MicGlyph size={15} />
+              </div>
+            </div>
+          ) : (
+            // Chat Only + Chat & Voice
+            <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white shadow-sm px-2 py-1">
+              {isBoth && (
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--preview-brand)]">
+                  <MicGlyph size={11} />
+                </div>
+              )}
+
+              <div className="h-2 w-2 rounded-full bg-slate-300" />
+
+              <div className="w-12 h-1 rounded-full bg-slate-100" />
+
+              <div className="h-2.5 w-2.5 rounded-full bg-[var(--preview-brand)]" />
+            </div>
+          )}
         </div>
       );
     default:
