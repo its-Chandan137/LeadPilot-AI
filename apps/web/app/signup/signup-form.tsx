@@ -29,7 +29,8 @@ export function SignupForm() {
 
     try {
       const supabase = createClient();
-      const redirectTo = `${window.location.origin}/auth/callback`;
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+      const redirectTo = `${siteUrl}/auth/callback`;
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,

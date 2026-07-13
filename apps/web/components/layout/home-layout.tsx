@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSharedPrismaClient } from "@/lib/prisma";
+import { ensureUserWorkspace } from "@/lib/auth";
 import { HomeLayoutClient } from "./home-layout-client";
 
 export async function HomeLayout({ children }: { children: React.ReactNode }) {
@@ -14,7 +15,7 @@ export async function HomeLayout({ children }: { children: React.ReactNode }) {
   }
 
   const prisma = getSharedPrismaClient();
-  const membership = await prisma.workspaceMember.findFirst({
+  let membership = await prisma.workspaceMember.findFirst({
     where: { userId: user.id },
     include: {
       workspace: {
@@ -22,6 +23,18 @@ export async function HomeLayout({ children }: { children: React.ReactNode }) {
       }
     }
   });
+
+  if (!membership) {
+    await ensureUserWorkspace(user);
+    membership = await prisma.workspaceMember.findFirst({
+      where: { userId: user.id },
+      include: {
+        workspace: {
+          select: { id: true, name: true }
+        }
+      }
+    });
+  }
 
   if (!membership) {
     redirect("/signup");
