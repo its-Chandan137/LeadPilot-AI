@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import {
   getWidgetModeFlags,
   isDockStyleTemplate,
+  isFusionTemplate,
   normalizeWidgetMode,
   type ApiResponse,
   type ChatResponse,
@@ -13,6 +14,7 @@ import {
   type WidgetMode,
 } from "@leadpilot/types";
 import { BlastWidget, getBlastStyles } from "./dock-style";
+import { FusionTemplate } from "./templates/fusion";
 
 type MountOptions = {
   root: ShadowRoot | HTMLElement;
@@ -537,6 +539,7 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
   const activeColor = config?.color ?? "#2563eb";
   const template = config?.template ?? "chatonly-classic";
   const isDockStyle = isDockStyleTemplate(template);
+  const isFusion=isFusionTemplate(template);
   const canSend = !!(draft.trim() && conversationId && status !== "loading");
   const isFormDisabled = status === "loading" || !conversationId;
 
@@ -695,6 +698,37 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
     );
   }
 
+  if (isFusion) {
+    return (
+      <>
+        <FusionTemplate
+          activeColor={activeColor}
+          classicStyles={styles(activeColor)}
+          config={config}
+          status={status}
+          openWidget={openWidget}
+          closeWidget={() => setStatus("collapsed")}
+          messages={renderMessages()}
+          scrollRef={scrollRef}
+          footer={{
+            mode,
+            draft,
+            conversationId,
+            canSend,
+            isFormDisabled,
+            isSending: status === "loading",
+            voiceState,
+            textareaRef,
+            onSubmit: handleSubmit,
+            onInputChange: handleInputChange,
+            onKeyDown: handleKeyDown,
+            startVoiceCall,
+            endVoiceCall,
+          }}
+        />
+      </>
+    );
+  }
   return (
     <>
       <style>{styles(activeColor)}</style>
