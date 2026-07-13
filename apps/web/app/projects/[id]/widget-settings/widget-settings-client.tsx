@@ -15,11 +15,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Paintbrush, Code, BarChart3, Cpu, Mic, Check } from "lucide-react";
+import { Paintbrush, Code, BarChart3, Cpu, Mic, Check, Target } from "lucide-react";
 import { CopySnippet } from "@/components/ui/copy-snippet";
 import { BrandSection } from "@/components/widget-settings/brand-section";
 
-type Tab = "setup" | "appearance" | "snippet" | "analytics";
+type Tab = "objective" | "setup" | "appearance" | "snippet" | "analytics";
 type Mode = "chat" | "voice" | "both";
 type Provider = WidgetProvider;
 
@@ -40,6 +40,7 @@ type Props = {
 };
 
 const tabs: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: "objective", label: "Bot Objective", icon: Target },
   { key: "setup", label: "Widget Setup", icon: Cpu },
   { key: "appearance", label: "Appearance", icon: Paintbrush },
   { key: "snippet", label: "Embed Snippet", icon: Code },
@@ -303,7 +304,7 @@ const snippetPlatforms: [string, string][] = [
 export function WidgetSettingsClient({ projectId, projectName, clientId, widgetConfig, apiUrl }: Props) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const initialTab: Tab = tabParam === "snippet" || tabParam === "appearance" || tabParam === "analytics" ? tabParam : "setup";
+  const initialTab: Tab = tabParam === "setup" || tabParam === "snippet" || tabParam === "appearance" || tabParam === "analytics" ? tabParam : "objective";
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [botName, setBotName] = useState((widgetConfig?.botName as string) ?? "LeadPilot");
   const [color, setColor] = useState((widgetConfig?.color as string) ?? "#2563eb");
@@ -325,6 +326,47 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   const [logoUrl, setLogoUrl] = useState(((widgetConfig?.brand as Record<string, unknown>)?.logoUrl as string) ?? "");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  type Objective = "lead-generation" | "customer-support" | "general-information";
+
+  const PREDEFINED_QUESTIONS: Record<Objective, string[]> = {
+    "lead-generation": [
+      "What is your name?",
+      "What is your email address?",
+      "What is your phone number?",
+      "What is your company name?",
+      "What is your budget range?",
+      "When are you looking to get started?",
+      "What service are you interested in?",
+    ],
+    "customer-support": [
+      "What product or service are you having issues with?",
+      "How long have you been experiencing this issue?",
+      "What is your order or account number?",
+      "Have you tried any troubleshooting steps?",
+      "What is the best way to contact you?",
+    ],
+    "general-information": [
+      "What services do you offer?",
+      "What are your business hours?",
+      "Where are you located?",
+      "How can I contact your team?",
+      "What are your pricing plans?",
+      "Do you offer a free trial?",
+    ],
+  };
+
+  const [objective, setObjective] = useState<Objective>(
+    (widgetConfig?.objective as Objective) ?? "lead-generation"
+  );
+  const [selectedQuestions, setSelectedQuestions] = useState<string[]>(
+    (widgetConfig?.questions as string[]) ?? PREDEFINED_QUESTIONS["lead-generation"].slice(0, 3)
+  );
+  const [customQuestionInput, setCustomQuestionInput] = useState("");
+
+  useEffect(() => {
+    setSelectedQuestions(PREDEFINED_QUESTIONS[objective].slice(0, 3));
+  }, [objective]);
 
   const isProviderGroq = provider === "groq";
   const templateType = modeToTemplateType(mode);
@@ -386,6 +428,8 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             provider,
             mode: normalizeWidgetMode(mode),
             template,
+            objective,
+            questions: selectedQuestions,
             ...(brandPayload !== undefined ? { brand: brandPayload } : {}),
           },
         }),
@@ -580,6 +624,204 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
 
           <Button type="submit" disabled={saving}>
             {saving ? "Saving..." : "Save Setup"}
+          </Button>
+        </form>
+      )}
+
+      {activeTab === "objective" && (
+        <form onSubmit={handleSave} className="rounded-xl border border-slate-200 bg-white p-6 space-y-8">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Bot Objective</h2>
+            <p className="text-sm text-slate-500">
+              Define what your bot is here to do and which questions it should ask.
+            </p>
+          </div>
+
+          {/* Section 1 - Objective Selector */}
+          <div className="space-y-3">
+            <Label className="text-base">What is the main goal of your bot?</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                {
+                  value: "lead-generation" as Objective,
+                  label: "Lead Generation",
+                  description: "Capture contact info and qualify prospects",
+                  icon: "🎯",
+                },
+                {
+                  value: "customer-support" as Objective,
+                  label: "Customer Support",
+                  description: "Help users resolve issues and answer queries",
+                  icon: "🛠️",
+                },
+                {
+                  value: "general-information" as Objective,
+                  label: "General Information",
+                  description: "Answer questions about your business",
+                  icon: "💡",
+                },
+              ].map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setObjective(item.value)}
+                  className={cn(
+                    "rounded-lg border-2 px-4 py-4 text-left transition-colors",
+                    objective === item.value
+                      ? "border-violet-600 bg-[#EDE9FE] ring-1 ring-violet-600"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
+                  )}
+                >
+                  <div className="text-2xl mb-2">{item.icon}</div>
+                  <div className="font-semibold text-slate-900 text-sm mb-1">{item.label}</div>
+                  <p className="text-xs text-slate-500">{item.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Section 2 - Predefined Questions */}
+          <div className="space-y-3">
+            <div>
+              <Label className="text-base">Select questions to ask</Label>
+              <p className="text-xs text-slate-500 mt-0.5">
+                These will be used by the bot to collect information from visitors.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {PREDEFINED_QUESTIONS[objective].map((question) => {
+                const isChecked = selectedQuestions.includes(question);
+                return (
+                  <label
+                    key={question}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors",
+                      isChecked
+                        ? "border-violet-300 bg-violet-50"
+                        : "border-slate-200 bg-white hover:bg-slate-50"
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => {
+                        setSelectedQuestions((prev) =>
+                          isChecked
+                            ? prev.filter((q) => q !== question)
+                            : [...prev, question]
+                        );
+                      }}
+                      className="accent-violet-600 w-4 h-4 rounded"
+                    />
+                    <span className="text-sm text-slate-700">{question}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Section 3 - Custom Questions */}
+          <div className="space-y-3">
+            <Label className="text-base">Add a custom question</Label>
+            <div className="flex gap-2">
+              <Input
+                value={customQuestionInput}
+                onChange={(e) => setCustomQuestionInput(e.target.value)}
+                placeholder="Type your own question..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const trimmed = customQuestionInput.trim();
+                    if (trimmed && !selectedQuestions.includes(trimmed)) {
+                      setSelectedQuestions((prev) => [...prev, trimmed]);
+                    }
+                    setCustomQuestionInput("");
+                  }
+                }}
+              />
+        <Button
+          type="button"
+          className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+          onClick={() => {
+            const trimmed = customQuestionInput.trim();
+            if (trimmed && !selectedQuestions.includes(trimmed)) {
+              setSelectedQuestions((prev) => [...prev, trimmed]);
+            }
+            setCustomQuestionInput("");
+          }}
+        >
+          Add
+        </Button>
+            </div>
+          </div>
+
+          {/* Section 4 - Selected Questions Summary + Reorder */}
+          {selectedQuestions.length > 0 && (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-base">Question priority</Label>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  The bot will ask these in order. Click the arrows to reorder, click × to remove.
+                </p>
+              </div>
+              <div className="space-y-2">
+                {selectedQuestions.map((question, index) => (
+                  <div
+                    key={question}
+                    className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5"
+                  >
+                    <span className="text-xs font-mono text-slate-400 w-5 text-center">{index + 1}</span>
+                    <span className="flex-1 text-sm text-slate-700">{question}</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => {
+                          const updated = [...selectedQuestions];
+                          [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+                          setSelectedQuestions(updated);
+                        }}
+                        className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        aria-label="Move up"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 9V3M3 6l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === selectedQuestions.length - 1}
+                        onClick={() => {
+                          const updated = [...selectedQuestions];
+                          [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+                          setSelectedQuestions(updated);
+                        }}
+                        className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        aria-label="Move down"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 3v6M9 6L6 9 3 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedQuestions((prev) => prev.filter((q) => q !== question))}
+                        className="p-1 rounded hover:bg-red-100 hover:text-red-600 transition-colors text-slate-400"
+                        aria-label="Remove question"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {toast && (
+            <p className={`text-sm ${toast.includes("Failed") ? "text-red-600" : "text-emerald-600"}`}>
+              {toast}
+            </p>
+          )}
+
+          <Button type="submit" disabled={saving}>
+            {saving ? "Saving..." : "Save Objective"}
           </Button>
         </form>
       )}
