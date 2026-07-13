@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Upload, FileText, Globe, Trash2, RefreshCw, File } from "lucide-react";
+import { Upload, FileText, Globe, Trash2, RefreshCw, File, Users } from "lucide-react";
 
 type KnowledgeSource = {
   id: string;
@@ -14,7 +14,7 @@ type KnowledgeSource = {
   };
 };
 
-type Tab = "text" | "document" | "url";
+type Tab = "text" | "document" | "url" | "social";
 
 export function KnowledgeClient({ projectId }: { projectId: string }) {
   const [activeTab, setActiveTab] = useState<Tab>("text");
@@ -30,6 +30,11 @@ export function KnowledgeClient({ projectId }: { projectId: string }) {
   const [docName, setDocName] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [socialPlatform, setSocialPlatform] = useState<string>("LINKEDIN");
+  const [socialContent, setSocialContent] = useState("");
+  const [socialProfileUrl, setSocialProfileUrl] = useState("");
+  const [socialName, setSocialName] = useState("");
 
   useEffect(() => {
     if (projectId) {
@@ -155,6 +160,44 @@ export function KnowledgeClient({ projectId }: { projectId: string }) {
     }
   }
 
+  async function handleSocialSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!projectId || !socialContent.trim()) return;
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/knowledge/social", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          platform: socialPlatform,
+          content: socialContent.trim(),
+          profileUrl: socialProfileUrl.trim() || undefined,
+          name: socialName.trim() || undefined,
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setMessage({ type: "success", text: `Added ${data.data.chunksCreated} social chunks to knowledge base` });
+        setSocialContent("");
+        setSocialProfileUrl("");
+        setSocialName("");
+        fetchSources(projectId);
+      } else {
+        setMessage({ type: "error", text: data.error || "Failed to add social content" });
+      }
+    } catch (error) {
+      setMessage({ type: "error", text: "Failed to add social content" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleDelete(sourceId: string) {
     if (!confirm("Are you sure you want to delete this source?")) return;
 
@@ -223,6 +266,8 @@ export function KnowledgeClient({ projectId }: { projectId: string }) {
         return <File className="w-5 h-5 text-gray-400" />;
       case "URL":
         return <Globe className="w-5 h-5 text-gray-400" />;
+      case "SOCIAL":
+        return <Users className="w-5 h-5 text-gray-400" />;
       default:
         return <FileText className="w-5 h-5 text-gray-400" />;
     }
@@ -269,6 +314,17 @@ export function KnowledgeClient({ projectId }: { projectId: string }) {
           >
             <Globe className="w-4 h-4 inline mr-2" />
             Website URL
+          </button>
+          <button
+            onClick={() => setActiveTab("social")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 ${
+              activeTab === "social"
+                ? "border-purple-600 text-purple-600"
+                : "border-transparent text-gray-500"
+            }`}
+          >
+            <Users className="w-4 h-4 inline mr-2" />
+            Social
           </button>
         </div>
 
@@ -405,6 +461,62 @@ export function KnowledgeClient({ projectId }: { projectId: string }) {
           </form>
         )}
 
+        {activeTab === "social" && (
+          <form onSubmit={handleSocialSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Platform</label>
+              <select
+                value={socialPlatform}
+                onChange={(e) => setSocialPlatform(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+              >
+                <option value="LINKEDIN">LinkedIn</option>
+                <option value="INSTAGRAM">Instagram</option>
+                <option value="FACEBOOK">Facebook</option>
+                <option value="TWITTER">Twitter/X</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Name (optional)</label>
+              <input
+                type="text"
+                value={socialName}
+                onChange={(e) => setSocialName(e.target.value)}
+                placeholder="e.g. Company LinkedIn, Founder Instagram"
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Content</label>
+              <textarea
+                value={socialContent}
+                onChange={(e) => setSocialContent(e.target.value)}
+                placeholder="Paste your bio, about section, notable posts..."
+                rows={8}
+                className="w-full px-3 py-2 border rounded-lg"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Profile URL (optional)</label>
+              <input
+                type="text"
+                value={socialProfileUrl}
+                onChange={(e) => setSocialProfileUrl(e.target.value)}
+                placeholder="https://linkedin.com/in/yourprofile"
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !projectId}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+            >
+              {loading ? "Adding..." : "Add Social Source"}
+            </button>
+          </form>
+        )}
+
         {message && (
           <div className={`mt-4 p-3 rounded-lg ${
             message.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
@@ -425,42 +537,99 @@ export function KnowledgeClient({ projectId }: { projectId: string }) {
             <RefreshCw className="w-4 h-4" />
           </button>
         </div>
-        {sources.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            No knowledge added yet
-          </div>
-        ) : (
-          <div className="divide-y">
-            {sources.map((source) => (
-              <div key={source.id} className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  {getSourceIcon(source.type)}
-                  <div>
-                    <p className="font-medium">{source.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {source.type} · {source._count.chunks} chunks · {new Date(source.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
+        {(() => {
+          const regularSources = sources.filter((s) => s.type !== "SOCIAL");
+          const socialSources = sources.filter((s) => s.type === "SOCIAL");
+
+          return (
+            <>
+              {regularSources.length === 0 && socialSources.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  No knowledge added yet
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    source.status === "READY" ? "bg-green-100 text-green-700" :
-                    source.status === "PROCESSING" ? "bg-yellow-100 text-yellow-700" :
-                    "bg-red-100 text-red-700"
-                  }`}>
-                    {source.status}
-                  </span>
-                  <button
-                    onClick={() => handleDelete(source.id)}
-                    className="p-1 text-gray-400 hover:text-red-500"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ) : (
+                <>
+                  {regularSources.length > 0 && (
+                    <div className="divide-y">
+                      {regularSources.map((source) => (
+                        <div key={source.id} className="p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            {getSourceIcon(source.type)}
+                            <div>
+                              <p className="font-medium">{source.name}</p>
+                              <p className="text-sm text-gray-500">
+                                {source.type} · {source._count.chunks} chunks · {new Date(source.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              source.status === "READY" ? "bg-green-100 text-green-700" :
+                              source.status === "PROCESSING" ? "bg-yellow-100 text-yellow-700" :
+                              "bg-red-100 text-red-700"
+                            }`}>
+                              {source.status}
+                            </span>
+                            <button
+                              onClick={() => handleDelete(source.id)}
+                              className="p-1 text-gray-400 hover:text-red-500"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {socialSources.length > 0 && (
+                    <>
+                      <div className="border-t-2 border-gray-100" />
+                      <div className="px-4 py-3 bg-gray-50">
+                        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Social Sources</h3>
+                      </div>
+                      <div className="divide-y">
+                        {socialSources.map((source) => (
+                          <div key={source.id} className="p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              {getSourceIcon(source.type)}
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">{source.name}</p>
+                                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+                                    SOCIAL
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-500">
+                                  {source.type} · {source._count.chunks} chunks · {new Date(source.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                source.status === "READY" ? "bg-green-100 text-green-700" :
+                                source.status === "PROCESSING" ? "bg-yellow-100 text-yellow-700" :
+                                "bg-red-100 text-red-700"
+                              }`}>
+                                {source.status}
+                              </span>
+                              <button
+                                onClick={() => handleDelete(source.id)}
+                                className="p-1 text-gray-400 hover:text-red-500"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   );
