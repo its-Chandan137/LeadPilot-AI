@@ -17,26 +17,54 @@
     return;
   }
 
-  var apiUrl = currentScript.getAttribute("data-api-url") || window.location.origin;
+  var apiUrl = (currentScript.getAttribute("data-api-url") || window.location.origin).replace(/\/$/, "");
   var widgetSrc = currentScript.getAttribute("data-widget-src") || apiUrl + "/widget-dist/widget.js";
 
-  var config = {
+  window.__LEADPILOT_CONFIG__ = {
     clientId: clientId,
     apiUrl: apiUrl
   };
 
-  console.log("[LeadPilot] Config:", config);
+  console.log("[LeadPilot] Config:", window.__LEADPILOT_CONFIG__);
   console.log("[LeadPilot] Loading widget from:", widgetSrc);
 
-  window.__LEADPILOT_CONFIG__ = config;
+  function remount() {
+    if (!window.LeadPilotWidget || typeof window.LeadPilotWidget.mount !== "function") {
+      return;
+    }
 
-  var container = document.createElement("div");
-  container.id = "leadpilot-widget-container";
-  document.body.appendChild(container);
+    var container = document.getElementById("leadpilot-widget-container");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "leadpilot-widget-container";
+      document.body.appendChild(container);
+    }
+
+    var shadow = container.shadowRoot || container.attachShadow({ mode: "open" });
+    window.LeadPilotWidget.mount({
+      root: shadow,
+      clientId: clientId,
+      apiUrl: apiUrl
+    });
+  }
+
+  // Already evaluated — remount with latest config (avoids re-declaring bundle bindings).
+  if (window.LeadPilotWidget) {
+    console.log("[LeadPilot] Widget already loaded — remounting");
+    remount();
+    return;
+  }
+
+  var existingBundle = document.querySelector('script[data-leadpilot-bundle="true"]');
+  if (existingBundle) {
+    existingBundle.addEventListener("load", remount);
+    return;
+  }
 
   var script = document.createElement("script");
   script.src = widgetSrc;
   script.async = true;
+  script.setAttribute("data-leadpilot-bundle", "true");
 
   script.onload = function () {
     console.log("[LeadPilot] Widget loaded successfully");

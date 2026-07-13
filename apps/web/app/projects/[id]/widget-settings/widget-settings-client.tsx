@@ -14,8 +14,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { CommonDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { Paintbrush, Code, BarChart3, Cpu, Mic, Check } from "lucide-react";
+import { Paintbrush, Code, BarChart3, Cpu, Mic, Check, Eye } from "lucide-react";
 import { CopySnippet } from "@/components/ui/copy-snippet";
 import { BrandSection } from "@/components/widget-settings/brand-section";
 
@@ -103,18 +104,7 @@ function defineTemplates(
   }));
 }
 
-function defineTemplates(
-  type: WidgetTemplateType,
-  items: { style: string; name: string; comingSoon?: boolean }[],
-): TemplateDef[] {
-  return items.map((item) => ({
-    value: `${type}-${item.style}`,
-    name: item.name,
-    type,
-    style: item.style,
-    comingSoon: item.comingSoon,
-  }));
-}
+
 
 const TEMPLATES: TemplateDef[] = [
   ...defineTemplates("chatonly", [
@@ -285,6 +275,175 @@ function TemplatePreview({ value }: { value: string; color?: string }) {
   }
 }
 
+function FullWidgetPreview({
+  value,
+  color = "#2563eb",
+  botName = "LeadPilot",
+  welcomeMessage = "Hi! How can I help you Today?",
+}: {
+  value: string;
+  color?: string;
+  botName?: string;
+  welcomeMessage?: string;
+}) {
+  const { type, style } = parseTemplateId(value);
+  const previewStyle = style ?? value;
+  const isVoice = type === "voiceonly";
+  const isBoth = type === "both";
+  const initial = botName.charAt(0).toUpperCase() || "L";
+  const suggestions = ["Book an appointment", "Business hours", "Pricing", "Contact support"];
+
+  if (previewStyle === "dock-style") {
+    return (
+      <div className="relative h-full w-full overflow-hidden bg-white">
+        <div className="absolute bottom-8 left-1/2 w-full max-w-md -translate-x-1/2 px-4">
+          <div className="rounded-[22px] bg-gradient-to-br from-cyan-300 via-teal-300 to-violet-400 p-[2px] shadow-xl">
+            <div className="rounded-[20px] bg-white px-4 pb-4 pt-5">
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-200" />
+              {isVoice ? (
+                <div className="flex justify-center py-6">
+                  <div
+                    className="flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg"
+                    style={{ background: color }}
+                  >
+                    <PhoneGlyph size={22} />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-3 flex items-center gap-2">
+                    <div className="min-w-0 flex-1 rounded-full bg-gradient-to-r from-cyan-300 to-violet-400 p-[2px]">
+                      <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2.5">
+                        <div className="h-4 w-4 rounded-full bg-cyan-300" />
+                        <div className="h-2 flex-1 rounded-full bg-slate-100" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full text-white" style={{ background: color }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" stroke="white" strokeWidth="2" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    {isBoth && (
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white" style={{ background: color }}>
+                        <PhoneGlyph size={16} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {["Speak to Sales", "Book a Demo", "Business hours", "Pricing"].map((label) => (
+                      <div key={label} className="rounded-full bg-slate-100 px-3 py-2.5 text-center text-xs font-semibold text-slate-600">
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isVoice) {
+    return (
+      <div className="relative h-full w-full overflow-hidden bg-white">
+        <div className="absolute bottom-6 right-6 w-[min(380px,calc(100%-48px))] overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-2xl">
+          <div className="flex items-center justify-between gap-3 px-4 py-4 text-white" style={{ background: color }}>
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-lg font-bold">{initial}</div>
+              <div>
+                <p className="text-sm font-bold leading-tight">{botName}</p>
+                <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-white/85">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  Online
+                </p>
+              </div>
+            </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white">×</div>
+          </div>
+          <div className="flex flex-col items-center justify-center gap-4 bg-slate-50 px-6 py-16">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full text-white shadow-lg" style={{ background: color }}>
+              <PhoneGlyph size={28} />
+            </div>
+            <p className="text-sm font-semibold text-slate-700">Start a voice call</p>
+          </div>
+          <p className="pb-3 text-center text-[10px] tracking-wide text-slate-400">Powered by LeadPilot</p>
+        </div>
+      </div>
+    );
+  }
+
+
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-white">
+      <div className="absolute bottom-6 right-6 flex h-[min(620px,calc(100%-48px))] w-[min(400px,calc(100%-48px))] flex-col overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-2xl">
+        <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-4 text-white" style={{ background: color }}>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20 text-lg font-bold">{initial}</div>
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-bold leading-tight">{botName}</p>
+              <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-white/85">
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  Online
+                </span>
+                <span>· Typically replies instantly</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-base leading-none text-white">×</div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 px-4 py-4">
+          <div className="mb-4 text-center">
+            <div
+              className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full text-2xl font-bold text-white shadow-md"
+              style={{ background: color }}
+            >
+              {initial}
+            </div>
+            <p className="text-base font-bold text-slate-900">Welcome!</p>
+            <p className="mt-1 text-[13px] text-slate-500">How can we help today?</p>
+            <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+              {suggestions.map((text) => (
+                <span
+                  key={text}
+                  className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[12px] text-slate-800"
+                >
+                  {text}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-2 max-w-[85%] rounded-[14px] rounded-bl-sm border border-slate-200 bg-white px-3.5 py-2.5 text-[14px] leading-relaxed text-slate-900 shadow-sm">
+            {welcomeMessage || "Hi! How can I help you Today?"}
+          </div>
+          <p className="mb-2 text-[10px] text-slate-400">Now</p>
+        </div>
+
+        <div className="flex shrink-0 items-end gap-2 border-t border-slate-200 bg-white px-3 py-3">
+          <div className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5 text-[14px] text-slate-400">
+            Type your message...
+          </div>
+          <div className="flex h-[42px] w-[46px] shrink-0 items-center justify-center rounded-xl text-white" style={{ background: color }}>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M2.5 10l15-7.5-7.5 15L8.75 11.25 2.5 10z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+            </svg>
+          </div>
+          {isBoth && (
+            <div className="flex h-[42px] w-[46px] shrink-0 items-center justify-center rounded-xl text-white" style={{ background: color }}>
+              <PhoneGlyph size={16} />
+            </div>
+          )}
+        </div>
+        <p className="shrink-0 pb-2 text-center text-[10px] tracking-wide text-slate-400">Powered by LeadPilot</p>
+      </div>
+    </div>
+  );
+}
+
 const snippetPlatforms: [string, string][] = [
   [
     "HTML",
@@ -331,15 +490,26 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   const [provider, setProvider] = useState<Provider>(initialProvider);
   const [mode, setMode] = useState<Mode>(initialMode);
   const [template, setTemplate] = useState(initialTemplate);
+  const [templateConfirmed, setTemplateConfirmed] = useState(true);
+  const [previewTemplate, setPreviewTemplate] = useState<string | null>(null);
   const templateSelections = useRef<Record<string, string>>({
     [initialType]: initialTemplate,
   });
+  const confirmedTypes = useRef<Set<string>>(new Set([initialType]));
   const [logoUrl, setLogoUrl] = useState(((widgetConfig?.brand as Record<string, unknown>)?.logoUrl as string) ?? "");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const isProviderGroq = provider === "groq";
   const templateType = modeToTemplateType(mode);
+
+  function selectTemplate(value: string) {
+    setTemplate(value);
+    setTemplateConfirmed(true);
+    confirmedTypes.current.add(templateType);
+    templateSelections.current[templateType] = value;
+    setPreviewTemplate(null);
+  }
 
   useEffect(() => {
     if (isProviderGroq && mode !== "chat") {
@@ -357,29 +527,39 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
     [templateType],
   );
 
-  useEffect(() => {
-    const saved = templateSelections.current[templateType];
-    const isValid = saved && validTemplates.some((t) => t.value === saved);
+  const previewDef = previewTemplate
+    ? TEMPLATES.find((t) => t.value === previewTemplate) ?? null
+    : null;
 
-    if (isValid) {
-      setTemplate(saved);
+  useEffect(() => {
+    const classicId = `${templateType}-classic`;
+    const saved = templateSelections.current[templateType];
+    const isValid = Boolean(saved && validTemplates.some((t) => t.value === saved));
+    const wasConfirmed = confirmedTypes.current.has(templateType);
+
+    if (isValid && wasConfirmed) {
+      setTemplate(saved!);
+      setTemplateConfirmed(true);
       return;
     }
 
-    const isCurrentValid = validTemplates.some((t) => t.value === template);
-    if (!isCurrentValid && validTemplates.length > 0) {
-      const fallback = validTemplates.find((t) => !t.comingSoon)?.value ?? validTemplates[0].value;
-      setTemplate(fallback);
-      templateSelections.current[templateType] = fallback;
-    }
-  }, [templateType, validTemplates]);
+    const fallback =
+      validTemplates.find((t) => t.value === classicId && !t.comingSoon)?.value ??
+      validTemplates.find((t) => !t.comingSoon)?.value ??
+      classicId;
 
-  useEffect(() => {
-    templateSelections.current[templateType] = template;
-  }, [template, templateType]);
+    setTemplate(fallback);
+    templateSelections.current[templateType] = fallback;
+    confirmedTypes.current.add(templateType);
+    setTemplateConfirmed(true);
+  }, [templateType, validTemplates]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    if (!templateConfirmed) {
+      setToast("Please select a template before saving");
+      return;
+    }
     setSaving(true);
     setToast(null);
     try {
@@ -542,59 +722,105 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
           <div className="space-y-3">
             <Label className="text-base">Choose Template</Label>
             <p className="text-xs text-slate-500">
-              Templates for{" "}
-              <span className="font-medium text-slate-700">
-                {MODES.find((m) => m.value === mode)?.label ?? mode}
-              </span>
-              <span className="ml-1 font-mono text-slate-400">({templateType}-*)</span>
+              Classic is selected by default. Hover a template to preview or choose another.
             </p>
             <div className="grid grid-cols-3 gap-4">
-              {validTemplates.map((t) => (
-                <button
-                  key={t.value}
-                  type="button"
-                  onClick={() => !t.comingSoon && setTemplate(t.value)}
-                  disabled={t.comingSoon}
-                  className={cn(
-                    "rounded-lg border-2 overflow-hidden transition-colors",
-                    t.comingSoon && "opacity-60 cursor-not-allowed",
-                    template === t.value
-                      ? "border-violet-600 ring-1 ring-violet-600"
-                      : "border-slate-200 hover:border-slate-300",
-                  )}
-                >
-                  <div className="relative h-40" style={{ "--preview-brand": color } as React.CSSProperties}>
-                    <TemplatePreview value={t.value} color={color} />
-                    {t.comingSoon && (
-                      <div className="absolute top-1 right-1 bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded font-medium">
-                        Coming Soon
-                      </div>
+              {validTemplates.map((t) => {
+                const isSelected = templateConfirmed && template === t.value;
+                return (
+                  <div
+                    key={t.value}
+                    className={cn(
+                      "group relative rounded-lg border-2 overflow-hidden transition-colors",
+                      t.comingSoon && "opacity-60",
+                      isSelected
+                        ? "border-violet-600 ring-1 ring-violet-600"
+                        : "border-slate-200",
                     )}
-                    {template === t.value && (
-                      <div className="absolute top-1 left-1 bg-violet-600 text-white rounded-full p-0.5">
-                        <Check className="w-3 h-3" />
-                      </div>
-                    )}
+                  >
+                    <div
+                      className="relative h-40 bg-slate-50"
+                      style={{ "--preview-brand": color } as React.CSSProperties}
+                    >
+                      <TemplatePreview value={t.value} color={color} />
+                      {t.comingSoon && (
+                        <div className="absolute top-1 right-1 bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded font-medium z-10">
+                          Coming Soon
+                        </div>
+                      )}
+                      {isSelected && (
+                        <div className="absolute top-1 left-1 bg-violet-600 text-white rounded-full p-0.5 z-10">
+                          <Check className="w-3 h-3" />
+                        </div>
+                      )}
+                      {!t.comingSoon && (
+                        <div className="absolute inset-0 z-20 flex items-center justify-center gap-2 bg-slate-900/45 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewTemplate(t.value)}
+                            className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            Preview
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => selectTemplate(t.value)}
+                            className="inline-flex items-center gap-1.5 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-violet-700"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            Select
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs font-medium text-center py-2 text-slate-700">{t.name}</p>
                   </div>
-                  <p className="text-xs font-medium text-center py-2 text-slate-700">{t.name}</p>
-                </button>
-              ))}
+                );
+              })}
             </div>
+            {!templateConfirmed && (
+              <p className="text-xs text-amber-600">Select a template to enable saving.</p>
+            )}
           </div>
 
           {toast && (
             <p
-              className={`text-sm ${toast.includes("Failed") ? "text-red-600" : "text-emerald-600"}`}
+              className={`text-sm ${toast.includes("Failed") || toast.includes("select") ? "text-red-600" : "text-emerald-600"}`}
             >
               {toast}
             </p>
           )}
 
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving || !templateConfirmed}>
             {saving ? "Saving..." : "Save Setup"}
           </Button>
         </form>
       )}
+
+      <CommonDialog
+        open={!!previewTemplate}
+        onOpenChange={(open) => !open && setPreviewTemplate(null)}
+        size="full"
+        title={`${previewDef?.name ?? "Template"} preview`}
+        description={previewDef?.value}
+        footer={
+          previewTemplate && !previewDef?.comingSoon ? (
+            <Button type="button" onClick={() => selectTemplate(previewTemplate)}>
+              Select template
+            </Button>
+          ) : undefined
+        }
+      >
+        {previewTemplate && (
+          <FullWidgetPreview
+            value={previewTemplate}
+            color={color}
+            botName={botName}
+            welcomeMessage={welcomeMessage || "Hi! How can I help you Today?"}
+          />
+        )}
+      </CommonDialog>
 
       {activeTab === "appearance" && (
         <form onSubmit={handleSave} className="rounded-xl border border-slate-200 bg-white p-6 space-y-5">
