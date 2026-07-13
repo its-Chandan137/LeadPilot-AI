@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { WidgetSettingsClient } from "./widget-settings-client";
 
@@ -14,12 +15,14 @@ export default async function WidgetSettingsPage({ params }: { params: { id: str
   const apiUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
   return (
-    <WidgetSettingsClient
-      projectId={params.id}
-      projectName={project?.name ?? "Project"}
-      clientId={project?.clientId ?? ""}
-      widgetConfig={(project?.widgetConfig as Record<string, unknown>) ?? {}}
-      apiUrl={apiUrl}
-    />
+    <Suspense fallback={<div className="p-6 text-slate-500">Loading…</div>}>
+      <WidgetSettingsClient
+        projectId={params.id}
+        projectName={project?.name ?? "Project"}
+        clientId={project?.clientId ?? ""}
+        widgetConfig={(project?.widgetConfig as Record<string, unknown>) ?? {}}
+        apiUrl={apiUrl}
+      />
+    </Suspense>
   );
 }
