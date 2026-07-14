@@ -5,6 +5,7 @@ import { Search, Users, ChevronLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { LeadSidebar } from "./lead-sidebar";
 import { LeadDetail } from "./lead-detail";
+import type { PersistedIntelligence } from "@/lib/crm";
 
 type Project = {
   id: string;
@@ -23,6 +24,8 @@ type LeadSummary = {
   createdAt: string;
   updatedAt: string;
   project: { id: string; name: string };
+  conversationId: string | null;
+  intelligence: PersistedIntelligence;
 };
 
 type LeadDetailData = {
@@ -37,6 +40,8 @@ type LeadDetailData = {
   createdAt: string;
   updatedAt: string;
   project: { id: string; name: string };
+  conversationId: string | null;
+  intelligence: PersistedIntelligence;
   conversation: {
     id: string;
     visitorId: string;
@@ -56,6 +61,7 @@ export function LeadsClient({ projects }: { projects: Project[] }) {
   const [projectFilter, setProjectFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [scoreFilter, setScoreFilter] = useState("all");
+  const [qualificationFilter, setQualificationFilter] = useState("all");
   const [dateRange, setDateRange] = useState("all");
   const [page, setPage] = useState(1);
   const [leads, setLeads] = useState<LeadSummary[]>([]);
@@ -75,6 +81,7 @@ export function LeadsClient({ projects }: { projects: Project[] }) {
       if (projectFilter !== "all") params.set("projectId", projectFilter);
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (scoreFilter !== "all") params.set("score", scoreFilter);
+      if (qualificationFilter !== "all") params.set("qualification", qualificationFilter);
       if (dateRange !== "all") params.set("dateRange", dateRange);
 
       const res = await fetch(`/api/leads?${params}`);
@@ -175,6 +182,16 @@ export function LeadsClient({ projects }: { projects: Project[] }) {
               <option value="COLD">COLD</option>
               <option value="WARM">WARM</option>
               <option value="HOT">HOT</option>
+            </select>
+            <select
+              value={qualificationFilter}
+              onChange={(e) => handleFilterChange(setQualificationFilter)(e.target.value)}
+              className="flex-1 h-9 rounded-md border border-slate-300 bg-white px-2 text-xs outline-none"
+            >
+              <option value="all">All AI Qual.</option>
+              <option value="Cold">Cold</option>
+              <option value="Warm">Warm</option>
+              <option value="Hot">Hot</option>
             </select>
             <select
               value={dateRange}

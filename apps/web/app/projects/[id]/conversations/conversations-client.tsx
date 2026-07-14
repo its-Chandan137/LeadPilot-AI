@@ -5,6 +5,7 @@ import { Search, MessageSquare, ChevronLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ConversationSidebar } from "./conversation-sidebar";
 import { ConversationChat } from "./conversation-chat";
+import type { PersistedIntelligence } from "@/lib/crm";
 
 type LeadInfo = {
   name: string | null;
@@ -48,6 +49,7 @@ type ConversationDetail = {
     createdAt: string;
   } | null;
   messages: MessageDetail[];
+  intelligence: PersistedIntelligence;
 };
 
 export function ConversationsClient({ projectId, projectName }: { projectId: string; projectName: string }) {

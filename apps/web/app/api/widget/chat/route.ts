@@ -403,8 +403,13 @@ export async function POST(request: Request) {
           structured.conversationIntelligence = aiOS.conversation;
           structured.aiOS = aiOS;
 
-          // Persist the generated intelligence (backend-only, no DB schema change).
-          persistConversation(conversationId, aiOS);
+          // Persist the generated intelligence durably (backend-only). Wrapped so
+          // a persistence failure never breaks the visitor's chat response.
+          try {
+            await persistConversation(conversationId, aiOS, project.id);
+          } catch (persistError) {
+            logger.error(persistError);
+          }
 
           // The widget receives only the reply. The rest of the structured
           // response (memoryUpdates, analysis, recommendation, lead fields,

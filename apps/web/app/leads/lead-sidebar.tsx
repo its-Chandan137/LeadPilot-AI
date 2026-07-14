@@ -1,4 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
+import { QualificationBadge, ChipList } from "@/components/crm/badges";
+import type { PersistedIntelligence } from "@/lib/crm";
 
 type LeadSummary = {
   id: string;
@@ -10,6 +12,8 @@ type LeadSummary = {
   status: string;
   createdAt: string;
   project: { id: string; name: string };
+  conversationId: string | null;
+  intelligence: PersistedIntelligence;
 };
 
 type Props = {
@@ -93,7 +97,32 @@ export function LeadSidebar({ leads, selectedId, onSelect, loading, page, totalP
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${scoreColors[lead.score] ?? "bg-slate-100 text-slate-600"}`}>
                 {lead.score}
               </span>
+              <QualificationBadge value={lead.intelligence.lead?.qualification} />
             </div>
+            {lead.intelligence.lead?.visitorStage && (
+              <p className="text-[10px] text-slate-400 mt-1 truncate">
+                {lead.intelligence.lead.visitorStage}
+                {lead.intelligence.lead.currentGoal ? ` · ${lead.intelligence.lead.currentGoal}` : ""}
+              </p>
+            )}
+            {(() => {
+              const chips = [
+                ...(lead.intelligence.conversation?.painPoints ?? []).slice(0, 2),
+                ...(lead.intelligence.conversation?.goals ?? []).slice(0, 2),
+                ...(lead.intelligence.conversation?.interests ?? []).slice(0, 2),
+                ...(lead.intelligence.conversation?.productsDiscussed ?? []).slice(0, 2),
+                lead.intelligence.business?.businessType,
+                lead.intelligence.business?.industry,
+                lead.intelligence.business?.company,
+                lead.intelligence.business?.location
+              ].filter(Boolean) as string[];
+              if (chips.length === 0) return null;
+              return (
+                <div className="mt-1.5">
+                  <ChipList items={chips.slice(0, 4)} />
+                </div>
+              );
+            })()}
           </button>
         );
       })}

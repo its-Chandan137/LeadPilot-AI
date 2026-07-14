@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ChevronLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { LeadProfile } from "@/components/crm/LeadProfile";
+import type { PersistedIntelligence } from "@/lib/crm";
 
 type LeadDetailData = {
   id: string;
@@ -15,6 +17,8 @@ type LeadDetailData = {
   createdAt: string;
   updatedAt: string;
   project: { id: string; name: string };
+  conversationId: string | null;
+  intelligence: PersistedIntelligence;
   conversation: {
     id: string;
     visitorId: string;
@@ -194,6 +198,11 @@ export function LeadDetail({ detail, loading, onBack, onLeadUpdated }: Props) {
               <span className="text-[#6B7280]">Updated</span>
               <span className="text-[#111827]">{formatDistanceToNow(new Date(detail.updatedAt), { addSuffix: true })}</span>
             </div>
+          </div>
+
+          <div className="bg-white rounded-lg border p-5 space-y-3">
+            <p className="text-sm font-semibold text-[#6B7280] tracking-wider uppercase">AI Intelligence</p>
+            <LeadProfile lead={detail} />
           </div>
 
           <div className="bg-white rounded-lg border p-5 space-y-3">
