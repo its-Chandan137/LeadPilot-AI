@@ -22,10 +22,13 @@ export function AuthShell({
   footerHref,
 }: AuthShellProps) {
   return (
-    <div className="min-h-screen w-full bg-cover bg-center bg-no-repeat flex items-center justify-center p-4 md:p-8" style={{ backgroundImage: "url('/cdn/auth-bg.jpg')" }}>
-      <div className="w-full max-w-6xl min-h-[85vh] md:min-h-[720px] rounded-2xl overflow-hidden shadow-2xl bg-white flex flex-col md:flex-row">
+    <div
+      className="min-h-screen w-full overflow-x-hidden bg-cover bg-center bg-no-repeat flex items-center justify-center p-4 sm:p-6 md:p-8"
+      style={{ backgroundImage: "url('/cdn/auth-bg.jpg')" }}
+    >
+      <div className="w-full max-w-6xl min-h-fit md:min-h-[720px] rounded-2xl overflow-hidden shadow-2xl bg-white flex flex-col min-[900px]:flex-row">
         {/* Left pane */}
-        <div className="hidden md:flex md:w-[55%] relative overflow-hidden">
+        <div className="hidden min-[900px]:flex min-[900px]:w-[55%] relative overflow-hidden">
           <img
             src="/cdn/auth-side.jpg"
             alt=""
@@ -38,7 +41,7 @@ export function AuthShell({
             className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
             aria-hidden
           />
-          <div className="relative z-10 flex h-full flex-col justify-between p-10 text-white">
+          <div className="relative z-10 flex h-full flex-col justify-between p-8 min-[1100px]:p-10 text-white">
             <div className="flex items-center gap-2">
               <div className="h-7 w-7 rounded-md bg-neutral-900 flex items-center justify-center text-white text-sm font-bold">
                 L
@@ -47,7 +50,7 @@ export function AuthShell({
             </div>
 
             <div className="flex flex-col gap-6">
-              <p className="text-2xl font-medium leading-snug max-w-md">
+              <p className="text-xl min-[1100px]:text-2xl font-medium leading-snug max-w-md text-balance">
                 &ldquo;LeadPilot AI turned our website into a 24/7 sales
                 rep&nbsp;&mdash; every visitor gets an instant, on-brand answer,
                 and every qualified lead lands in our CRM.&rdquo;
@@ -85,7 +88,7 @@ export function AuthShell({
         </div>
 
         {/* Right pane */}
-        <div className="flex-1 md:w-[45%] bg-white flex items-center justify-center p-6 md:p-10">
+        <div className="flex-1 min-[900px]:w-[45%] bg-white flex items-center justify-center p-4 sm:p-6 md:p-10">
           <div className="w-full max-w-sm space-y-6">
             <div className="flex items-center gap-2">
               <div className="h-7 w-7 rounded-md bg-neutral-900 flex items-center justify-center text-white text-sm font-bold">
@@ -141,7 +144,8 @@ export function AuthShell({
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-                Connect with Google
+                <span className="sm:hidden">Google</span>
+                <span className="hidden sm:inline">Connect with Google</span>
               </button>
               <button
                 type="button"
@@ -158,7 +162,8 @@ export function AuthShell({
                 >
                   <path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.27-1.69-1.27-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.75 1.18 1.75 1.18 1.02 1.75 2.68 1.24 3.34.95.1-.74.4-1.24.72-1.53-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.18 1.83 1.18 3.09 0 4.42-2.69 5.4-5.25 5.68.41.36.78 1.06.78 2.14 0 1.55-.01 2.79-.01 3.17 0 .31.21.67.8.55A11.5 11.5 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5z" />
                 </svg>
-                Continue with GitHub
+                <span className="sm:hidden">GitHub</span>
+                <span className="hidden sm:inline">Continue with GitHub</span>
               </button>
             </div>
 
