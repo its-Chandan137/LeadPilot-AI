@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { Paintbrush, Code, BarChart3, Cpu, Mic, Check, Eye, Target } from "lucide-react";
 import { CopySnippet } from "@/components/ui/copy-snippet";
 import { BrandSection } from "@/components/widget-settings/brand-section";
+import { UnsavedChangesPopup } from "@/components/popups/unsaved-changes";
 
 type Tab = "objective" | "setup" | "appearance" | "snippet" | "analytics";
 type Mode = "chat" | "voice" | "both";
@@ -565,6 +566,8 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   const [logoUrl, setLogoUrl] = useState(((widgetConfig?.brand as Record<string, unknown>)?.logoUrl as string) ?? "");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [pendingTab, setPendingTab] = useState<Tab | null>(null);
+  const [showUnsaved, setShowUnsaved] = useState(false);
 
   type Objective = "lead-generation" | "customer-support" | "general-information";
 
@@ -606,6 +609,51 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   useEffect(() => {
     setSelectedQuestions(PREDEFINED_QUESTIONS[objective].slice(0, 3));
   }, [objective]);
+
+  const baselineRef = useRef<string>("");
+  const savedSnapshotRef = useRef<null | {
+    botName: string;
+    color: string;
+    welcomeMessage: string;
+    provider: Provider;
+    mode: Mode;
+    template: string;
+    objective: Objective;
+    selectedQuestions: string[];
+    logoUrl: string;
+  }>(null);
+  const stateRef = useRef({
+    botName,
+    color,
+    welcomeMessage,
+    provider,
+    mode,
+    template,
+    objective,
+    selectedQuestions,
+    logoUrl,
+  });
+  stateRef.current = {
+    botName,
+    color,
+    welcomeMessage,
+    provider,
+    mode,
+    template,
+    objective,
+    selectedQuestions,
+    logoUrl,
+  };
+  const currentSnapshot = () => JSON.stringify(stateRef.current);
+  const syncBaseline = () => {
+    baselineRef.current = currentSnapshot();
+  };
+  const isDirty = baselineRef.current !== "" && baselineRef.current !== currentSnapshot();
+
+  useEffect(() => {
+    const id = setTimeout(syncBaseline, 0);
+    return () => clearTimeout(id);
+  }, []);
 
   const isProviderGroq = provider === "groq";
   const templateType = modeToTemplateType(mode);
@@ -661,11 +709,10 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
     setTemplateConfirmed(true);
   }, [templateType, validTemplates]);
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function performSave(): Promise<boolean> {
     if (!templateConfirmed) {
       setToast("Please select a template before saving");
-      return;
+      return false;
     }
     setSaving(true);
     setToast(null);
@@ -695,15 +742,99 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
       if (json.success) {
         setToast("Settings saved successfully");
         setTimeout(() => setToast(null), 3000);
+        savedSnapshotRef.current = stateRef.current;
+        syncBaseline();
+        return true;
       } else {
         setToast(json.error ?? "Failed to save settings");
+        return false;
       }
     } catch {
       setToast("Failed to save settings");
+      return false;
     } finally {
       setSaving(false);
     }
   }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    await performSave();
+  }
+
+  function requestTabChange(next: Tab) {
+    if (next === activeTab) return;
+    if (isDirty) {
+      setPendingTab(next);
+      setShowUnsaved(true);
+    } else {
+      setActiveTab(next);
+    }
+  }
+
+  function resetForm() {
+    const snapshot = savedSnapshotRef.current;
+    const botName =
+      snapshot?.botName ?? ((widgetConfig?.botName as string) ?? "LeadPilot");
+    const color = snapshot?.color ?? ((widgetConfig?.color as string) ?? "#2563eb");
+    const welcomeMessage =
+      snapshot?.welcomeMessage ?? ((widgetConfig?.welcomeMessage as string) ?? "");
+    const provider = snapshot?.provider ?? ((widgetConfig?.provider as Provider) ?? "groq");
+    const mode =
+      snapshot?.mode ?? (normalizeWidgetMode(widgetConfig?.mode as string) as Mode);
+    const objective =
+      snapshot?.objective ?? ((widgetConfig?.objective as Objective) ?? "lead-generation");
+    const selectedQuestions =
+      snapshot?.selectedQuestions ??
+      ((widgetConfig?.questions as string[]) ?? PREDEFINED_QUESTIONS[objective].slice(0, 3));
+    const logoUrl =
+      snapshot?.logoUrl ??
+      (((widgetConfig?.brand as Record<string, unknown>)?.logoUrl as string) ?? "");
+    const template =
+      snapshot?.template ??
+      (widgetConfig?.template
+        ? normalizeWidgetTemplate(widgetConfig.template as string, mode)
+        : defaultTemplateFor(mode));
+
+    setBotName(botName);
+    setColor(color);
+    setWelcomeMessage(welcomeMessage);
+    setProvider(provider);
+    setMode(mode);
+    setTemplate(template);
+    setObjective(objective);
+    setLogoUrl(logoUrl);
+    setTemplateConfirmed(true);
+    templateSelections.current = { [modeToTemplateType(mode)]: template };
+    confirmedTypes.current = new Set([modeToTemplateType(mode)]);
+    // The [objective] effect re-applies default questions when objective changes;
+    // restore the saved questions after it runs.
+    setTimeout(() => setSelectedQuestions(selectedQuestions), 0);
+    // Mark the reverted values as the new baseline immediately so we are no
+    // longer considered dirty (the selectedQuestions state settles via the
+    // timeout above, but the baseline already reflects the reverted value).
+    baselineRef.current = JSON.stringify({
+      botName,
+      color,
+      welcomeMessage,
+      provider,
+      mode,
+      template,
+      objective,
+      selectedQuestions,
+      logoUrl,
+    });
+  }
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   const brandData = useMemo(() => {
     const b = widgetConfig?.brand as Record<string, unknown> | undefined;
@@ -732,7 +863,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
           return (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => requestTabChange(tab.key)}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.key
                   ? "border-[#7C3AED] text-[#7C3AED]"
                   : "border-transparent text-[#6B7280] hover:text-[#111827]"
@@ -929,7 +1060,31 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             welcomeMessage={welcomeMessage || "Hi! How can I help you Today?"}
           />
         )}
-      </CommonDialog>
+        </CommonDialog>
+
+      <UnsavedChangesPopup
+        open={showUnsaved}
+        saving={saving}
+        onSave={async () => {
+          const ok = await performSave();
+          if (ok) {
+            setShowUnsaved(false);
+            if (pendingTab) setActiveTab(pendingTab);
+            setPendingTab(null);
+          }
+        }}
+        onDiscard={() => {
+          resetForm();
+          setShowUnsaved(false);
+          if (pendingTab) setActiveTab(pendingTab);
+          setPendingTab(null);
+        }}
+        onCancel={() => {
+          setShowUnsaved(false);
+          setPendingTab(null);
+        }}
+      />
+
 
       {activeTab === "objective" && (
         <form onSubmit={handleSave} className="rounded-xl border border-slate-200 bg-white p-6 space-y-8">
