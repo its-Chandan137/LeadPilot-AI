@@ -3,7 +3,13 @@ import { SignupForm } from "./signup-form";
 
 export default function SignupPage() {
   return (
-    <AuthShell>
+    <AuthShell
+      heading="Create your account"
+      subtitle="Start capturing leads with your own AI chat widget."
+      footerText="Already have an account? "
+      footerLinkText="Sign In"
+      footerHref="/login"
+    >
       <SignupForm />
     </AuthShell>
   );
