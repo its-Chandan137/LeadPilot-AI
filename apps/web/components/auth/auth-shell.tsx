@@ -22,11 +22,15 @@ export function AuthShell({
   footerHref,
 }: AuthShellProps) {
   return (
-    <div
-      className="min-h-screen w-full overflow-x-hidden bg-cover bg-center bg-no-repeat flex items-center justify-center p-4 sm:p-6 md:p-8"
-      style={{ backgroundImage: "url('/cdn/auth-bg.jpg')" }}
-    >
-      <div className="w-full max-w-6xl min-h-fit md:min-h-[720px] rounded-2xl overflow-hidden shadow-2xl bg-white flex flex-col min-[900px]:flex-row">
+    <div className="relative min-h-screen w-full overflow-x-hidden flex items-center justify-center p-4 sm:p-6 md:p-8">
+      {/* TWEAK: senior asked for 0.78–0.82; using 0.80. Bump to opacity-[0.78] or opacity-[0.82] if needed. */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-80"
+        style={{ backgroundImage: "url('/cdn/auth-bg.jpg')" }}
+        aria-hidden
+      />
+      {/* Content layer */}
+      <div className="relative z-10 w-full max-w-6xl min-h-fit md:min-h-[720px] rounded-2xl overflow-hidden shadow-2xl bg-white flex flex-col min-[900px]:flex-row">
         {/* Left pane */}
         <div className="hidden min-[900px]:flex min-[900px]:w-[55%] relative overflow-hidden">
           <img
@@ -37,6 +41,8 @@ export function AuthShell({
           {/* TWEAK POINTS: color hex and alpha.
               Warmer: #5c3317. Cooler: #3a2410. Heavier: /65. Lighter: /40. */}
           <div className="absolute inset-0 bg-[#4a2c14]/55" aria-hidden />
+          {/* TWEAK: subtle white wash on top of the brown tint — hazes/lightens the palette without killing the brown. Bump to /20 or /25 if user wants stronger. */}
+          <div className="absolute inset-0 bg-white/15" aria-hidden />
           <div
             className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
             aria-hidden
@@ -44,7 +50,7 @@ export function AuthShell({
           <div className="relative z-10 flex h-full flex-col justify-between p-8 min-[1100px]:p-10 text-white">
             <div className="flex items-center gap-2">
               <div className="h-7 w-7 rounded-md bg-neutral-900 flex items-center justify-center text-white text-sm font-bold">
-                L
+                LP
               </div>
               <span className="text-lg font-semibold">LeadPilot AI</span>
             </div>
@@ -57,11 +63,8 @@ export function AuthShell({
               </p>
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full bg-white/20" aria-hidden />
-                <div>
-                  <div className="text-sm font-medium">Priya Menon</div>
-                  <div className="text-xs text-white/70">
-                    Founder @ Northlight Studio
-                  </div>
+                <div className="text-sm font-medium text-white">
+                  kaustavm@techvedhas.com
                 </div>
               </div>
               <div className="space-y-2 mt-4">
@@ -92,7 +95,7 @@ export function AuthShell({
           <div className="w-full max-w-sm space-y-6">
             <div className="flex items-center gap-2">
               <div className="h-7 w-7 rounded-md bg-neutral-900 flex items-center justify-center text-white text-sm font-bold">
-                L
+                LP
               </div>
               <span className="text-base font-semibold text-neutral-900">
                 LeadPilot AI
