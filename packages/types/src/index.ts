@@ -153,10 +153,7 @@ export function normalizeWidgetTemplate(
 }
 
 export function defaultTemplateFor(mode: WidgetMode): string {
-  const type = modeToTemplateType(mode);
-  if (mode === "voice") return buildTemplateId(type, "orb");
-  if (mode === "both") return buildTemplateId(type, "classic");
-  return buildTemplateId(type, "classic");
+  return buildTemplateId(modeToTemplateType(mode), "classic");
 }
 
 export type WidgetConfigResponse = {
