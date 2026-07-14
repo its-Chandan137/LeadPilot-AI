@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
@@ -58,33 +56,46 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Welcome back</CardTitle>
-        <CardDescription>Log in to manage your workspace and projects.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-4" onSubmit={onSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" onChange={(event) => setEmail(event.target.value)} required type="email" value={email} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
-          </div>
-          {error ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-          <Button className="w-full" disabled={isLoading} type="submit">
-            {isLoading ? "Logging in..." : "Log in"}
-          </Button>
-        </form>
-        <p className="mt-6 text-center text-sm text-slate-600">
-          New to LeadPilot?{" "}
-          <Link className="font-medium text-blue-700" href="/signup">
-            Create an account
-          </Link>
-        </p>
-      </CardContent>
-    </Card>
+    <form className="space-y-4" onSubmit={onSubmit}>
+      <div className="space-y-1.5">
+        <Label className="text-sm font-medium text-neutral-800 mb-1.5 block" htmlFor="email">
+          Email
+        </Label>
+        <Input
+          className="h-11 rounded-lg border-neutral-200 bg-neutral-50 placeholder:text-neutral-400"
+          id="email"
+          onChange={(event) => setEmail(event.target.value)}
+          required
+          type="email"
+          value={email}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium text-neutral-800" htmlFor="password">
+            Password
+          </Label>
+          <span className="text-xs text-neutral-600 hover:text-neutral-900 underline-offset-4 cursor-default">
+            Forgot password?
+          </span>
+        </div>
+        <Input
+          className="h-11 rounded-lg border-neutral-200 bg-neutral-50 placeholder:text-neutral-400"
+          id="password"
+          onChange={(event) => setPassword(event.target.value)}
+          required
+          type="password"
+          value={password}
+        />
+      </div>
+      {error ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+      <Button
+        className="w-full h-11 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 text-sm font-medium"
+        disabled={isLoading}
+        type="submit"
+      >
+        {isLoading ? "Signing in..." : "Sign In"}
+      </Button>
+    </form>
   );
 }

@@ -5,7 +5,13 @@ export default function LoginPage({ searchParams }: { searchParams?: { next?: st
   const nextPath = searchParams?.next?.startsWith("/") ? searchParams.next : "/dashboard";
 
   return (
-    <AuthShell>
+    <AuthShell
+      heading="Welcome Back"
+      subtitle="Enter your details to sign in to your workspace."
+      footerText="Don't have an account? "
+      footerLinkText="Sign Up"
+      footerHref="/signup"
+    >
       <LoginForm nextPath={nextPath} />
     </AuthShell>
   );
