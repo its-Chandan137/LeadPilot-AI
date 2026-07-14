@@ -48,9 +48,10 @@ type FusionTemplateProps = {
   footer: FusionFooterProps;
 };
 
-function fusionStyles(color: string) {
+function fusionStyles(color: string, font: string) {
+  const fontFamily = font && font.trim() ? font : 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
   return `
-    .lp-fusion, .lp-fusion * { box-sizing: border-box; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .lp-fusion, .lp-fusion * { box-sizing: border-box; font-family: ${fontFamily}; }
     .lp-fusion { position: fixed; z-index: 2147483647; left: 50%; bottom: 20px; transform: translateX(-50%); color: #0f172a; }
     .lp-fusion-launcher { width: min(300px, calc(100vw - 32px)); height: 52px; border: 1px solid rgba(148, 163, 184, 0.34); border-radius: 999px; background: rgba(255, 255, 255, 0.86); color: #64748b; cursor: pointer; box-shadow: 0 18px 60px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255,255,255,0.88); display: flex; align-items: center; gap: 12px; padding: 0 18px; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease; }
     .lp-fusion-launcher:hover { transform: translateY(-2px); border-color: color-mix(in srgb, ${color} 42%, rgba(148,163,184,0.34)); box-shadow: 0 22px 70px rgba(15, 23, 42, 0.22), 0 0 0 4px color-mix(in srgb, ${color} 9%, transparent); }
@@ -88,6 +89,7 @@ function fusionStyles(color: string) {
       .lp-fusion-panel { width: calc(100vw - 20px); height: min(620px, calc(100vh - 82px)); border-radius: 22px; }
       .lp-fusion-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
     }
+    .lp-fusion-poweredby { text-align: center; padding: 8px 12px 10px; font-size: 11px; color: #94a3b8; background: rgba(255,255,255,0.7); border-top: 1px solid rgba(148,163,184,0.16); flex-shrink: 0; }
   `;
 }
 
@@ -192,7 +194,7 @@ export function FusionTemplate({
   return (
     <>
       <style>{classicStyles}</style>
-      <style>{fusionStyles(activeColor)}</style>
+      <style>{fusionStyles(activeColor, config.fontFamily ?? "")}</style>
       <div className="lp-fusion">
         {status === "collapsed" ? (
           <button aria-label="Open chat" className="lp-fusion-launcher" onClick={openWidget} type="button">
@@ -205,12 +207,22 @@ export function FusionTemplate({
           <section aria-label="LeadPilot chat" className="lp-fusion-panel" role="dialog" aria-modal="true">
             <header className="lp-fusion-header">
               <div className="lp-fusion-identity">
-                <div className="lp-fusion-avatar" aria-hidden="true">{config?.botName.charAt(0) ?? "L"}</div>
+                <div className="lp-fusion-avatar" aria-hidden="true">
+                  {config?.avatarUrl ? (
+                    <img
+                      src={config.avatarUrl}
+                      alt=""
+                      style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "999px" }}
+                    />
+                  ) : (
+                    (config?.botName.charAt(0) ?? "L")
+                  )}
+                </div>
                 <div>
-                  <p className="lp-fusion-name">{config?.botName ?? "LeadPilot"}</p>
+                  <p className="lp-fusion-name">{config?.headerTitle || config?.botName || "LeadPilot"}</p>
                   <p className="lp-fusion-status">
                     <span className="lp-fusion-dot" aria-hidden="true" />
-                    <span>Online</span>
+                    <span>Online{config?.headerSubtitle ? ` · ${config.headerSubtitle}` : ""}</span>
                   </p>
                 </div>
               </div>
@@ -224,6 +236,9 @@ export function FusionTemplate({
               {messages}
             </div>
             <FusionFooter footer={footer} />
+            {config?.showBranding !== false && (
+              <footer className="lp-fusion-poweredby">Powered by LeadPilot</footer>
+            )}
           </section>
         )}
       </div>

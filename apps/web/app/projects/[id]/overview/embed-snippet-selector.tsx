@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CopySnippet } from "@/components/ui/copy-snippet";
 
 type Platform = {
@@ -10,27 +10,34 @@ type Platform = {
 
 export function EmbedSnippetSelector({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
   const [selected, setSelected] = useState(0);
+  const [origin, setOrigin] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+
+  const base = origin ?? apiUrl;
 
   const platforms: Platform[] = [
     {
       label: "HTML",
-      snippet: `<script\n  async\n  src="${apiUrl}/widget.js"\n  data-client-id="${clientId}"\n  data-api-url="${apiUrl}"\n  data-widget-src="${apiUrl}/widget-dist/widget.js"\n></script>`,
+      snippet: `<script\n  async\n  src="${base}/widget.js"\n  data-client-id="${clientId}"\n  data-api-url="${base}"\n  data-widget-src="${base}/widget-dist/widget.js"\n></script>`,
     },
     {
       label: "React",
-      snippet: `useEffect(() => {\n  const s = document.createElement('script')\n  s.src = '${apiUrl}/widget.js'\n  s.async = true\n  s.dataset.clientId = '${clientId}'\n  s.dataset.apiUrl = '${apiUrl}'\n  s.dataset.widgetSrc = '${apiUrl}/widget-dist/widget.js'\n  document.body.appendChild(s)\n  return () => document.body.removeChild(s)\n}, [])`,
+      snippet: `useEffect(() => {\n  const s = document.createElement('script')\n  s.src = '${base}/widget.js'\n  s.async = true\n  s.dataset.clientId = '${clientId}'\n  s.dataset.apiUrl = '${base}'\n  s.dataset.widgetSrc = '${base}/widget-dist/widget.js'\n  document.body.appendChild(s)\n  return () => document.body.removeChild(s)\n}, [])`,
     },
     {
       label: "Next.js",
-      snippet: `<Script\n  async\n  src="${apiUrl}/widget.js"\n  data-client-id="${clientId}"\n  data-api-url="${apiUrl}"\n  data-widget-src="${apiUrl}/widget-dist/widget.js"\n/>`,
+      snippet: `<Script\n  async\n  src="${base}/widget.js"\n  data-client-id="${clientId}"\n  data-api-url="${base}"\n  data-widget-src="${base}/widget-dist/widget.js"\n/>`,
     },
     {
       label: "Vue",
-      snippet: `onMounted(() => {\n  const s = document.createElement('script')\n  s.src = '${apiUrl}/widget.js'\n  s.async = true\n  s.dataset.clientId = '${clientId}'\n  s.dataset.apiUrl = '${apiUrl}'\n  s.dataset.widgetSrc = '${apiUrl}/widget-dist/widget.js'\n  document.body.appendChild(s)\n})`,
+      snippet: `onMounted(() => {\n  const s = document.createElement('script')\n  s.src = '${base}/widget.js'\n  s.async = true\n  s.dataset.clientId = '${clientId}'\n  s.dataset.apiUrl = '${base}'\n  s.dataset.widgetSrc = '${base}/widget-dist/widget.js'\n  document.body.appendChild(s)\n})`,
     },
     {
       label: "Angular",
-      snippet: `ngOnInit() {\n  const s = document.createElement('script')\n  s.src = '${apiUrl}/widget.js'\n  s.async = true\n  s.dataset.clientId = '${clientId}'\n  s.dataset.apiUrl = '${apiUrl}'\n  s.dataset.widgetSrc = '${apiUrl}/widget-dist/widget.js'\n  document.body.appendChild(s)\n}`,
+      snippet: `ngOnInit() {\n  const s = document.createElement('script')\n  s.src = '${base}/widget.js'\n  s.async = true\n  s.dataset.clientId = '${clientId}'\n  s.dataset.apiUrl = '${base}'\n  s.dataset.widgetSrc = '${base}/widget-dist/widget.js'\n  document.body.appendChild(s)\n}`,
     },
   ];
 

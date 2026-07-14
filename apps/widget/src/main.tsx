@@ -112,10 +112,17 @@ function autoResize(el: HTMLTextAreaElement) {
   el.style.height = Math.min(el.scrollHeight, 150) + "px";
 }
 
-function styles(color: string) {
+const DEFAULT_FONT = 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+function resolveFont(font?: string): string {
+  return font && font.trim() ? font : DEFAULT_FONT;
+}
+
+function styles(color: string, font: string) {
+  const fontFamily = resolveFont(font);
   return `
     :host { all: initial; }
-    .lp-widget, .lp-widget * { box-sizing: border-box; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .lp-widget, .lp-widget * { box-sizing: border-box; font-family: ${fontFamily}; }
     .lp-widget { position: fixed; z-index: 2147483647; right: 20px; bottom: 20px; color: #0f172a; }
 
     .lp-launcher { width: 58px; height: 58px; border: 0; border-radius: 999px; background: ${color}; color: #fff; cursor: pointer; box-shadow: 0 18px 42px rgba(15, 23, 42, 0.24); display: grid; place-items: center; transition: transform 160ms ease, box-shadow 160ms ease; }
@@ -482,7 +489,17 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
       <>
         {showWelcome && (
           <div className="lp-welcome lp-message-wrap">
-            <div className="lp-welcome-avatar" aria-hidden="true">{config?.botName.charAt(0) ?? "L"}</div>
+            <div className="lp-welcome-avatar" aria-hidden="true">
+              {config?.avatarUrl ? (
+                <img
+                  src={config.avatarUrl}
+                  alt=""
+                  style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "999px" }}
+                />
+              ) : (
+                (config?.botName.charAt(0) ?? "L")
+              )}
+            </div>
             <p className="lp-welcome-title">Welcome!</p>
             <p className="lp-welcome-desc">How can we help today?</p>
             <div className="lp-suggestions" role="group" aria-label="Suggested questions">
@@ -665,10 +682,12 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
   if (isDockStyle) {
     return (
       <>
-        <style>{getBlastStyles(activeColor)}</style>
+        <style>{getBlastStyles(activeColor, config.fontFamily ?? "")}</style>
         <BlastWidget
           botName={config.botName ?? "LeadPilot"}
           color={activeColor}
+          fontFamily={config.fontFamily}
+          showBranding={config.showBranding}
           status={status}
           mode={mode}
           messages={messages}
@@ -703,7 +722,7 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
       <>
         <FusionTemplate
           activeColor={activeColor}
-          classicStyles={styles(activeColor)}
+          classicStyles={styles(activeColor, config.fontFamily ?? "")}
           config={config}
           status={status}
           openWidget={openWidget}
@@ -731,7 +750,7 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
   }
   return (
     <>
-      <style>{styles(activeColor)}</style>
+      <style>{styles(activeColor, config.fontFamily ?? "")}</style>
       <div className="lp-widget">
         {status === "collapsed" ? (
           <button aria-label="Open chat" className="lp-launcher" onClick={openWidget} type="button">
@@ -743,15 +762,25 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
           <section aria-label="LeadPilot chat" className="lp-panel" role="dialog" aria-modal="true">
             <header className="lp-header">
               <div className="lp-identity">
-                <div className="lp-avatar" aria-hidden="true">{config.botName.charAt(0) ?? "L"}</div>
+                <div className="lp-avatar" aria-hidden="true">
+                  {config.avatarUrl ? (
+                    <img
+                      src={config.avatarUrl}
+                      alt=""
+                      style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "999px" }}
+                    />
+                  ) : (
+                    (config.botName?.charAt(0) ?? "L")
+                  )}
+                </div>
                 <div>
-                  <p className="lp-name">{config.botName ?? "LeadPilot"}</p>
+                  <p className="lp-name">{config.headerTitle || config.botName || "LeadPilot"}</p>
                   <p className="lp-subtitle">
                     <span className="lp-online">
                       <span className="lp-dot" aria-hidden="true" />
                       <span>Online</span>
                     </span>
-                    <span> · Typically replies instantly</span>
+                    <span> · {config.headerSubtitle || "Typically replies instantly"}</span>
                   </p>
                 </div>
               </div>
@@ -770,7 +799,7 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
               {renderMessages()}
             </div>
             {renderInputArea()}
-            <footer className="lp-footer">Powered by LeadPilot</footer>
+            {config.showBranding !== false && <footer className="lp-footer">Powered by LeadPilot</footer>}
           </section>
         )}
       </div>

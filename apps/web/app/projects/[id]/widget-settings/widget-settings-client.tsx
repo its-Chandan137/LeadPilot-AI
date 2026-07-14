@@ -16,9 +16,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CommonDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { Paintbrush, Code, BarChart3, Cpu, Mic, Check, Eye, Target } from "lucide-react";
+import { Paintbrush, Code, BarChart3, Cpu, Mic, Check, Eye, Target, Upload } from "lucide-react";
 import { CopySnippet } from "@/components/ui/copy-snippet";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { BrandSection } from "@/components/widget-settings/brand-section";
+import { UnsavedChangesPopup } from "@/components/popups/unsaved-changes";
 
 type Tab = "objective" | "setup" | "appearance" | "snippet" | "analytics";
 type Mode = "chat" | "voice" | "both";
@@ -537,6 +539,15 @@ const snippetPlatforms: [string, string][] = [
   ],
 ];
 
+const FONT_OPTIONS: { label: string; value: string }[] = [
+  { label: "Inter (Default)", value: "" },
+  { label: "System UI", value: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
+  { label: "Serif (Georgia)", value: 'Georgia, Cambria, "Times New Roman", serif' },
+  { label: "Monospace", value: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" },
+  { label: "Rounded (Quicksand)", value: 'Quicksand, "Segoe UI", system-ui, sans-serif' },
+  { label: "Poppins", value: 'Poppins, "Segoe UI", system-ui, sans-serif' },
+];
+
 export function WidgetSettingsClient({ projectId, projectName, clientId, widgetConfig, apiUrl }: Props) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -563,8 +574,15 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   });
   const confirmedTypes = useRef<Set<string>>(new Set([initialType]));
   const [logoUrl, setLogoUrl] = useState(((widgetConfig?.brand as Record<string, unknown>)?.logoUrl as string) ?? "");
+  const [showBranding, setShowBranding] = useState(widgetConfig?.showBranding !== false);
+  const [fontFamily, setFontFamily] = useState((widgetConfig?.fontFamily as string) ?? "");
+  const [headerTitle, setHeaderTitle] = useState((widgetConfig?.headerTitle as string) ?? "");
+  const [headerSubtitle, setHeaderSubtitle] = useState((widgetConfig?.headerSubtitle as string) ?? "");
+  const [avatarUrl, setAvatarUrl] = useState((widgetConfig?.avatarUrl as string) ?? "");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [pendingTab, setPendingTab] = useState<Tab | null>(null);
+  const [showUnsaved, setShowUnsaved] = useState(false);
 
   type Objective = "lead-generation" | "customer-support" | "general-information";
 
@@ -606,6 +624,66 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   useEffect(() => {
     setSelectedQuestions(PREDEFINED_QUESTIONS[objective].slice(0, 3));
   }, [objective]);
+
+  const baselineRef = useRef<string>("");
+  const savedSnapshotRef = useRef<null | {
+    botName: string;
+    color: string;
+    welcomeMessage: string;
+    provider: Provider;
+    mode: Mode;
+    template: string;
+    objective: Objective;
+    selectedQuestions: string[];
+    logoUrl: string;
+    showBranding: boolean;
+    fontFamily: string;
+    headerTitle: string;
+    headerSubtitle: string;
+    avatarUrl: string;
+  }>(null);
+  const stateRef = useRef({
+    botName,
+    color,
+    welcomeMessage,
+    provider,
+    mode,
+    template,
+    objective,
+    selectedQuestions,
+    logoUrl,
+    showBranding,
+    fontFamily,
+    headerTitle,
+    headerSubtitle,
+    avatarUrl,
+  });
+  stateRef.current = {
+    botName,
+    color,
+    welcomeMessage,
+    provider,
+    mode,
+    template,
+    objective,
+    selectedQuestions,
+    logoUrl,
+    showBranding,
+    fontFamily,
+    headerTitle,
+    headerSubtitle,
+    avatarUrl,
+  };
+  const currentSnapshot = () => JSON.stringify(stateRef.current);
+  const syncBaseline = () => {
+    baselineRef.current = currentSnapshot();
+  };
+  const isDirty = baselineRef.current !== "" && baselineRef.current !== currentSnapshot();
+
+  useEffect(() => {
+    const id = setTimeout(syncBaseline, 0);
+    return () => clearTimeout(id);
+  }, []);
 
   const isProviderGroq = provider === "groq";
   const templateType = modeToTemplateType(mode);
@@ -661,11 +739,10 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
     setTemplateConfirmed(true);
   }, [templateType, validTemplates]);
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function performSave(): Promise<boolean> {
     if (!templateConfirmed) {
       setToast("Please select a template before saving");
-      return;
+      return false;
     }
     setSaving(true);
     setToast(null);
@@ -687,6 +764,11 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             template,
             objective,
             questions: selectedQuestions,
+            showBranding,
+            fontFamily,
+            headerTitle,
+            headerSubtitle,
+            avatarUrl,
             ...(brandPayload !== undefined ? { brand: brandPayload } : {}),
           },
         }),
@@ -695,15 +777,114 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
       if (json.success) {
         setToast("Settings saved successfully");
         setTimeout(() => setToast(null), 3000);
+        savedSnapshotRef.current = stateRef.current;
+        syncBaseline();
+        return true;
       } else {
         setToast(json.error ?? "Failed to save settings");
+        return false;
       }
     } catch {
       setToast("Failed to save settings");
+      return false;
     } finally {
       setSaving(false);
     }
   }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    await performSave();
+  }
+
+  function requestTabChange(next: Tab) {
+    if (next === activeTab) return;
+    if (isDirty) {
+      setPendingTab(next);
+      setShowUnsaved(true);
+    } else {
+      setActiveTab(next);
+    }
+  }
+
+  function resetForm() {
+    const snapshot = savedSnapshotRef.current;
+    const botName =
+      snapshot?.botName ?? ((widgetConfig?.botName as string) ?? "LeadPilot");
+    const color = snapshot?.color ?? ((widgetConfig?.color as string) ?? "#2563eb");
+    const welcomeMessage =
+      snapshot?.welcomeMessage ?? ((widgetConfig?.welcomeMessage as string) ?? "");
+    const provider = snapshot?.provider ?? ((widgetConfig?.provider as Provider) ?? "groq");
+    const mode =
+      snapshot?.mode ?? (normalizeWidgetMode(widgetConfig?.mode as string) as Mode);
+    const objective =
+      snapshot?.objective ?? ((widgetConfig?.objective as Objective) ?? "lead-generation");
+    const selectedQuestions =
+      snapshot?.selectedQuestions ??
+      ((widgetConfig?.questions as string[]) ?? PREDEFINED_QUESTIONS[objective].slice(0, 3));
+    const logoUrl =
+      snapshot?.logoUrl ??
+      (((widgetConfig?.brand as Record<string, unknown>)?.logoUrl as string) ?? "");
+    const showBranding = snapshot?.showBranding ?? (widgetConfig?.showBranding !== false);
+    const fontFamily = snapshot?.fontFamily ?? ((widgetConfig?.fontFamily as string) ?? "");
+    const headerTitle = snapshot?.headerTitle ?? ((widgetConfig?.headerTitle as string) ?? "");
+    const headerSubtitle = snapshot?.headerSubtitle ?? ((widgetConfig?.headerSubtitle as string) ?? "");
+    const avatarUrl = snapshot?.avatarUrl ?? ((widgetConfig?.avatarUrl as string) ?? "");
+    const template =
+      snapshot?.template ??
+      (widgetConfig?.template
+        ? normalizeWidgetTemplate(widgetConfig.template as string, mode)
+        : defaultTemplateFor(mode));
+
+    setBotName(botName);
+    setColor(color);
+    setWelcomeMessage(welcomeMessage);
+    setProvider(provider);
+    setMode(mode);
+    setTemplate(template);
+    setObjective(objective);
+    setLogoUrl(logoUrl);
+    setShowBranding(showBranding);
+    setFontFamily(fontFamily);
+    setHeaderTitle(headerTitle);
+    setHeaderSubtitle(headerSubtitle);
+    setAvatarUrl(avatarUrl);
+    setTemplateConfirmed(true);
+    templateSelections.current = { [modeToTemplateType(mode)]: template };
+    confirmedTypes.current = new Set([modeToTemplateType(mode)]);
+    // The [objective] effect re-applies default questions when objective changes;
+    // restore the saved questions after it runs.
+    setTimeout(() => setSelectedQuestions(selectedQuestions), 0);
+    // Mark the reverted values as the new baseline immediately so we are no
+    // longer considered dirty (the selectedQuestions state settles via the
+    // timeout above, but the baseline already reflects the reverted value).
+    baselineRef.current = JSON.stringify({
+      botName,
+      color,
+      welcomeMessage,
+      provider,
+      mode,
+      template,
+      objective,
+      selectedQuestions,
+      logoUrl,
+      showBranding,
+      fontFamily,
+      headerTitle,
+      headerSubtitle,
+      avatarUrl,
+    });
+  }
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   const brandData = useMemo(() => {
     const b = widgetConfig?.brand as Record<string, unknown> | undefined;
@@ -732,7 +913,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
           return (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => requestTabChange(tab.key)}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.key
                   ? "border-[#7C3AED] text-[#7C3AED]"
                   : "border-transparent text-[#6B7280] hover:text-[#111827]"
@@ -929,7 +1110,31 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             welcomeMessage={welcomeMessage || "Hi! How can I help you Today?"}
           />
         )}
-      </CommonDialog>
+        </CommonDialog>
+
+      <UnsavedChangesPopup
+        open={showUnsaved}
+        saving={saving}
+        onSave={async () => {
+          const ok = await performSave();
+          if (ok) {
+            setShowUnsaved(false);
+            if (pendingTab) setActiveTab(pendingTab);
+            setPendingTab(null);
+          }
+        }}
+        onDiscard={() => {
+          resetForm();
+          setShowUnsaved(false);
+          if (pendingTab) setActiveTab(pendingTab);
+          setPendingTab(null);
+        }}
+        onCancel={() => {
+          setShowUnsaved(false);
+          setPendingTab(null);
+        }}
+      />
+
 
       {activeTab === "objective" && (
         <form onSubmit={handleSave} className="rounded-xl border border-slate-200 bg-white p-6 space-y-8">
@@ -1130,46 +1335,169 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
       )}
 
       {activeTab === "appearance" && (
-        <form onSubmit={handleSave} className="rounded-xl border border-slate-200 bg-white p-6 space-y-5">
+        <form onSubmit={handleSave} className="space-y-7 rounded-xl border border-slate-200 bg-white p-6">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Appearance</h2>
             <p className="text-sm text-slate-500">Customize how the widget looks on your site.</p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="botName">Bot Name</Label>
-            <Input
-              id="botName"
-              value={botName}
-              onChange={(e) => setBotName(e.target.value)}
-              placeholder="Ava"
-            />
-          </div>
+          <section className="space-y-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Basic</h3>
+            <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="botName">Bot Name</Label>
+                <Input
+                  id="botName"
+                  value={botName}
+                  onChange={(e) => setBotName(e.target.value)}
+                  placeholder="Ava"
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="color">Brand Color</Label>
-            <div className="flex items-center gap-3">
-              <Input
-                id="color"
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="h-10 w-16 cursor-pointer p-1"
-              />
-              <span className="text-sm text-slate-600 font-mono">{color}</span>
+              <div className="space-y-1.5">
+                <Label htmlFor="color">Brand Color</Label>
+                <ColorPicker value={color} onChange={setColor} />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="welcomeMessage">Welcome Message</Label>
+                <textarea
+                  id="welcomeMessage"
+                  value={welcomeMessage}
+                  onChange={(e) => setWelcomeMessage(e.target.value)}
+                  className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#7C3AED] focus:ring-2 focus:ring-[#EDE9FE]"
+                  placeholder="Hi! How can I help you today?"
+                />
+              </div>
             </div>
-          </div>
+          </section>
 
-          <div className="space-y-2">
-            <Label htmlFor="welcomeMessage">Welcome Message</Label>
-            <textarea
-              id="welcomeMessage"
-              value={welcomeMessage}
-              onChange={(e) => setWelcomeMessage(e.target.value)}
-              className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#7C3AED] focus:ring-2 focus:ring-[#EDE9FE]"
-              placeholder="Hi! How can I help you today?"
-            />
-          </div>
+          <section className="space-y-4 border-t border-slate-100 pt-6">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Widget Header</h3>
+            <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="headerTitle">Header Title</Label>
+                <Input
+                  id="headerTitle"
+                  value={headerTitle}
+                  onChange={(e) => setHeaderTitle(e.target.value)}
+                  placeholder={botName || "LeadPilot"}
+                />
+                <p className="text-xs text-slate-500">Shown in the widget header. Falls back to Bot Name.</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="headerSubtitle">Header Subtitle</Label>
+                <Input
+                  id="headerSubtitle"
+                  value={headerSubtitle}
+                  onChange={(e) => setHeaderSubtitle(e.target.value)}
+                  placeholder="Online · Typically replies instantly"
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-4 border-t border-slate-100 pt-6">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Style</h3>
+            <div className="grid grid-cols-1 items-start gap-x-5 gap-y-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="fontFamily">Font Family</Label>
+                <select
+                  id="fontFamily"
+                  value={fontFamily}
+                  onChange={(e) => setFontFamily(e.target.value)}
+                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-[#7C3AED] focus:ring-2 focus:ring-[#EDE9FE]"
+                >
+                  {FONT_OPTIONS.map((opt) => (
+                    <option key={opt.label} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium text-slate-800">Show “Powered by LeadPilot”</Label>
+                  <p className="text-xs text-slate-500">Turn off to white-label.</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={showBranding}
+                  onClick={() => setShowBranding((v) => !v)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                    showBranding ? "bg-[#7C3AED]" : "bg-slate-300"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                      showBranding ? "translate-x-5" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-4 border-t border-slate-100 pt-6">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Widget Avatar / Logo</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Upload an image to show in the widget header instead of the bot initials.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 rounded-lg border border-slate-200 p-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-50">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Widget avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-xs text-slate-400">None</span>
+                )}
+              </div>
+              <div className="flex min-w-[200px] flex-1 flex-col gap-2">
+                <Input
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="https://…/logo.png or paste image URL"
+                  className="text-sm"
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    id="avatar-upload"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setAvatarUrl(reader.result as string);
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    className="inline-flex items-center gap-2 border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                    onClick={() => document.getElementById("avatar-upload")?.click()}
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload image
+                  </Button>
+                  {avatarUrl && (
+                    <Button
+                      type="button"
+                      className="bg-transparent text-red-600 hover:bg-red-50"
+                      onClick={() => setAvatarUrl("")}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
 
           <BrandSection
             brand={brandData}

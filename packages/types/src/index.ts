@@ -41,6 +41,10 @@ export type WidgetConfig = {
   botName: string;
   welcomeMessage: string;
   avatarUrl?: string;
+  showBranding?: boolean;
+  fontFamily?: string;
+  headerTitle?: string;
+  headerSubtitle?: string;
   mode?: WidgetMode;
   template?: string;
   livekitUrl?: string;

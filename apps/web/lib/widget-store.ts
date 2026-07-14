@@ -15,6 +15,10 @@ type WidgetConfigJson = {
   botName?: string;
   welcomeMessage?: string;
   avatarUrl?: string;
+  showBranding?: boolean;
+  fontFamily?: string;
+  headerTitle?: string;
+  headerSubtitle?: string;
   mode?: "chat" | "voice" | "both";
   template?: string;
   livekitUrl?: string;
@@ -65,6 +69,10 @@ export function toWidgetConfig(project: StoredProject): WidgetConfig {
     botName: config.botName ?? "LeadPilot",
     welcomeMessage: config.welcomeMessage ?? "Hi! How can I help you today?",
     avatarUrl: config.avatarUrl,
+    showBranding: config.showBranding ?? true,
+    fontFamily: config.fontFamily,
+    headerTitle: config.headerTitle,
+    headerSubtitle: config.headerSubtitle,
     mode,
     template: config.template
       ? normalizeWidgetTemplate(config.template, mode)
