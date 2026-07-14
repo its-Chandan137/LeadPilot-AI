@@ -6,7 +6,10 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "LeadPilot AI",
-  description: "Embeddable chat widget foundation for LeadPilot AI"
+  description: "Embeddable chat widget foundation for LeadPilot AI",
+  icons: {
+    icon: "/Images/favicon.jpg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
