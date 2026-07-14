@@ -9,7 +9,8 @@ import { retrieveRelevantChunks } from "@/lib/retrieval";
 import { buildStructuredResponseInstruction, parseAIResponse, type AIConversationResponse } from "@/lib/ai-response";
 import { getConversationMemory, mergeMemoryUpdates, buildMemorySummary } from "@/lib/conversation-memory";
 import { getConfiguredObjectives } from "@/lib/objectives";
-import { evaluateLead } from "@/lib/lead-scoring";
+import { runAIOS } from "@/lib/ai-os";
+import { persistConversation } from "@/lib/intelligence-store";
 import { logger } from "@/lib/logger";
 import { extractLeadInfo, hasLeadData } from "@/lib/lead-extractor";
 
@@ -377,23 +378,37 @@ export async function POST(request: Request) {
           if (structured.memoryUpdates) {
             mergeMemoryUpdates(conversationId, structured.memoryUpdates);
           }
-          // Re-read memory (now updated) and run the lead scoring engine. These
-          // fields are backend-only and never reach the widget.
+          // Re-read memory (now updated) and run the AI Operating System. Every
+          // engine (lead scoring, goal, strategy, action, sales brain, CRM,
+          // analytics, timeline) runs in pipeline order inside runAIOS.
+          // All outputs are backend-only and never reach the widget.
           const configuredObjectives = getConfiguredObjectives(project.widgetConfig);
-          const evaluation = evaluateLead({
-            objectives: configuredObjectives,
-            memory: getConversationMemory(conversationId),
+          const updatedMemory = getConversationMemory(conversationId);
+
+          const aiOS = runAIOS({
+            conversationId,
+            history,
+            memory: updatedMemory,
             analysis: structured.analysis,
-            recommendation: structured.recommendation
+            recommendation: structured.recommendation,
+            configuredObjectives
           });
-          structured.leadScore = evaluation.score;
-          structured.qualification = evaluation.qualification;
-          structured.scoreReasons = evaluation.scoreReasons;
-          structured.completedObjectives = evaluation.completedObjectives;
-          structured.pendingObjectives = evaluation.pendingObjectives;
+
+          structured.leadScore = aiOS.lead.score;
+          structured.qualification = aiOS.lead.qualification;
+          structured.scoreReasons = aiOS.lead.scoreReasons;
+          structured.completedObjectives = aiOS.lead.completedObjectives;
+          structured.pendingObjectives = aiOS.lead.pendingObjectives;
+          structured.actionEngine = aiOS.nextAction;
+          structured.conversationIntelligence = aiOS.conversation;
+          structured.aiOS = aiOS;
+
+          // Persist the generated intelligence (backend-only, no DB schema change).
+          persistConversation(conversationId, aiOS);
+
           // The widget receives only the reply. The rest of the structured
-          // response (memoryUpdates, analysis, recommendation, lead fields)
-          // stays backend-only.
+          // response (memoryUpdates, analysis, recommendation, lead fields,
+          // action engine, intelligence, AI OS) stays backend-only.
           reply = structured.reply;
         } else {
           reply = "Sorry, I don't have access to your site information yet. Add content to your Knowledge Base to enable AI responses.";
