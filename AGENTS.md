@@ -29,8 +29,16 @@
 - None. Awaiting user direction for Phase 16.
 - NOTE: `scripts/clear-data.ts` is a PRE-EXISTING user script that `DELETE FROM "Lead"` and `"Conversation"` (and cascades Messages). Do NOT run it unless intending a full wipe — it would also delete the seeded demo conversations.
 
+### Known Issue (prod)
+- `https://leadpilot-ai-beryl.vercel.app` `/api/crm/dashboard` returns 500 ("Application error: a server-side exception", digest 1570973028) in BOTH global (no projectId) and the dashboard page RSC render.
+- Diagnosed locally: `getLiveDashboard()` (lib/crm/dashboard.ts) runs CLEAN against the same shared Supabase DB in both scopes (verified via scripts/repro-crm.ts, since deleted). CRM code was NOT changed this session, so current code is correct.
+- Conclusion: the Vercel deployment is a STALE/PARTIAL build (and/or the same corrupted `.next` vendor-chunk state as the local `@opentelemetry.js` error) — NOT a code/data bug.
+- Fix: redeploy to Vercel with "Clear build cache" (fresh `next build`, no `.next` cache). If it still 500s, the Vercel Function log holds the real (non-hidden) error.
+- Local `.next` was cleared + rebuilt successfully (no more `@opentelemetry.js` module error).
+
 ## Next Move
 - User to review the now-populated analytics dashboard + CRM pages (real computed metrics, no placeholder "g/s/p" values).
+- Redeploy to Vercel with a clean build to resolve the CRM dashboard 500 (stale build, not a code bug).
 - Optionally extend `scripts/seed-conversations.ts` scenarios or counts (`SEED_COUNT` env) for broader demos.
 - Proceed to Phase 16 when the user confirms the polish pass is sufficient.
 
