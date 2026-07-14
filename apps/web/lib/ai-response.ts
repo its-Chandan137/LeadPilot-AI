@@ -59,12 +59,21 @@ export interface ConversationRecommendation {
   [key: string]: unknown;
 }
 
+// Lead qualification bucket derived from the score. Backend only.
+export type LeadQualification = "Cold" | "Warm" | "Hot";
+
 export interface AIConversationResponse {
   // The ONLY text shown to the visitor.
   reply: string;
   memoryUpdates?: MemoryUpdates;
   analysis?: ConversationAnalysis;
   recommendation?: ConversationRecommendation;
+  // Backend-only lead intelligence (never shown to the visitor).
+  leadScore?: number;
+  qualification?: LeadQualification;
+  completedObjectives?: string[];
+  pendingObjectives?: string[];
+  scoreReasons?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -94,7 +103,12 @@ const aiResponseSchema = z.object({
   reply: z.string(),
   memoryUpdates: memoryUpdatesSchema.optional(),
   analysis: analysisSchema.optional(),
-  recommendation: recommendationSchema.optional()
+  recommendation: recommendationSchema.optional(),
+  leadScore: z.number().min(0).max(100).optional(),
+  qualification: z.enum(["Cold", "Warm", "Hot"]).optional(),
+  completedObjectives: z.array(z.string()).optional(),
+  pendingObjectives: z.array(z.string()).optional(),
+  scoreReasons: z.array(z.string()).optional()
 });
 
 // ---------------------------------------------------------------------------
@@ -118,13 +132,20 @@ Use exactly this shape:
   },
   "recommendation": {
     "action": "continue_conversation | ask_for_missing_information | offer_demo | offer_contact | end_conversation"
-  }
+  },
+  "leadScore": 0,
+  "qualification": "Cold | Warm | Hot",
+  "completedObjectives": [],
+  "pendingObjectives": [],
+  "scoreReasons": []
 }
 
 Rules:
 - "reply" contains ONLY the text displayed to the visitor.
 - "memoryUpdates" returns ONLY newly learned facts (e.g. {"name":"John"}). Return {} when nothing new. Never overwrite known values unless the visitor explicitly corrects them. Never invent information.
 - "analysis" and "recommendation" are internal only and must never be shown to the visitor.
+- "leadScore", "qualification", "completedObjectives", "pendingObjectives", and "scoreReasons" describe lead intelligence; you may provide your best estimate, but the backend recalculates them from memory and conversation signals. They are never shown to the visitor.
+- "completedObjectives" / "pendingObjectives" list the conversation objectives (by their text) you have satisfied / not yet satisfied.
 - Always return valid JSON.`;
 }
 
@@ -166,7 +187,12 @@ export function parseAIResponse(raw: string): AIConversationResponse {
         reply: result.data.reply,
         memoryUpdates: result.data.memoryUpdates ?? {},
         analysis: result.data.analysis,
-        recommendation: result.data.recommendation
+        recommendation: result.data.recommendation,
+        leadScore: result.data.leadScore,
+        qualification: result.data.qualification,
+        completedObjectives: result.data.completedObjectives,
+        pendingObjectives: result.data.pendingObjectives,
+        scoreReasons: result.data.scoreReasons
       };
     }
 

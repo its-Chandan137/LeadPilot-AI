@@ -8,6 +8,8 @@ import { getSharedPrismaClient } from "@/lib/prisma";
 import { retrieveRelevantChunks } from "@/lib/retrieval";
 import { buildStructuredResponseInstruction, parseAIResponse, type AIConversationResponse } from "@/lib/ai-response";
 import { getConversationMemory, mergeMemoryUpdates, buildMemorySummary } from "@/lib/conversation-memory";
+import { getConfiguredObjectives } from "@/lib/objectives";
+import { evaluateLead } from "@/lib/lead-scoring";
 import { logger } from "@/lib/logger";
 import { extractLeadInfo, hasLeadData } from "@/lib/lead-extractor";
 
@@ -37,6 +39,7 @@ function buildObjectiveInstructions(widgetConfig: unknown): string {
   const config = (widgetConfig ?? null) as {
     objective?: unknown;
     questions?: unknown;
+    objectives?: unknown;
   } | null;
 
   const objective = config?.objective;
@@ -45,12 +48,11 @@ function buildObjectiveInstructions(widgetConfig: unknown): string {
   const label = getObjectiveLabel(objective);
   if (!label) return "";
 
-  // Configured "questions" are no longer a scripted checklist. They represent
-  // details the assistant should naturally learn over the course of a real
-  // conversation, only when it fits.
-  const detailsToLearn = Array.isArray(config?.questions)
-    ? (config.questions as unknown[]).filter((q): q is string => typeof q === "string")
-    : [];
+  // Conversation objectives are goals the AI should naturally achieve — never a
+  // scripted checklist. Resolved from the structured `objectives` field, with a
+  // legacy `questions` fallback handled in getConfiguredObjectives().
+  const configured = getConfiguredObjectives(config);
+  const detailsToLearn = configured.filter((o) => o.enabled).map((o) => o.objective);
 
   let section = `\n\nYOUR ROLE:\n`;
   section += `You are a professional sales representative for this business. Your primary objective is: ${label}.\n`;
@@ -61,7 +63,7 @@ function buildObjectiveInstructions(widgetConfig: unknown): string {
   section += `Do not immediately start qualifying visitors. If the visitor only greets you (e.g. "Hi"), greet them back naturally and wait for their question.`;
 
   if (detailsToLearn.length > 0) {
-    section += `\n\nOver the course of the conversation, naturally learn the visitor's:\n`;
+    section += `\n\nCONVERSATION OBJECTIVES — naturally achieve these objectives whenever appropriate:\n`;
     section += detailsToLearn.map((q) => `- ${q}`).join("\n");
     section += `\nCollect these only when appropriate and helpful. Helping the visitor always comes first.`;
   }
@@ -375,8 +377,23 @@ export async function POST(request: Request) {
           if (structured.memoryUpdates) {
             mergeMemoryUpdates(conversationId, structured.memoryUpdates);
           }
+          // Re-read memory (now updated) and run the lead scoring engine. These
+          // fields are backend-only and never reach the widget.
+          const configuredObjectives = getConfiguredObjectives(project.widgetConfig);
+          const evaluation = evaluateLead({
+            objectives: configuredObjectives,
+            memory: getConversationMemory(conversationId),
+            analysis: structured.analysis,
+            recommendation: structured.recommendation
+          });
+          structured.leadScore = evaluation.score;
+          structured.qualification = evaluation.qualification;
+          structured.scoreReasons = evaluation.scoreReasons;
+          structured.completedObjectives = evaluation.completedObjectives;
+          structured.pendingObjectives = evaluation.pendingObjectives;
           // The widget receives only the reply. The rest of the structured
-          // response (memoryUpdates, analysis, recommendation) stays backend-only.
+          // response (memoryUpdates, analysis, recommendation, lead fields)
+          // stays backend-only.
           reply = structured.reply;
         } else {
           reply = "Sorry, I don't have access to your site information yet. Add content to your Knowledge Base to enable AI responses.";

@@ -10,7 +10,9 @@ import {
   parseTemplateId,
   type WidgetProvider,
   type WidgetTemplateType,
+  type BotObjective,
 } from "@leadpilot/types";
+import { PREDEFINED_OBJECTIVES, type ProjectObjective } from "@/lib/objectives";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -584,45 +586,19 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   const [pendingTab, setPendingTab] = useState<Tab | null>(null);
   const [showUnsaved, setShowUnsaved] = useState(false);
 
-  type Objective = "lead-generation" | "customer-support" | "general-information";
-
-  const PREDEFINED_QUESTIONS: Record<Objective, string[]> = {
-    "lead-generation": [
-      "What is your name?",
-      "What is your email address?",
-      "What is your phone number?",
-      "What is your company name?",
-      "What is your budget range?",
-      "When are you looking to get started?",
-      "What service are you interested in?",
-    ],
-    "customer-support": [
-      "What product or service are you having issues with?",
-      "How long have you been experiencing this issue?",
-      "What is your order or account number?",
-      "Have you tried any troubleshooting steps?",
-      "What is the best way to contact you?",
-    ],
-    "general-information": [
-      "What services do you offer?",
-      "What are your business hours?",
-      "Where are you located?",
-      "How can I contact your team?",
-      "What are your pricing plans?",
-      "Do you offer a free trial?",
-    ],
-  };
+  type Objective = ProjectObjective;
 
   const [objective, setObjective] = useState<Objective>(
     (widgetConfig?.objective as Objective) ?? "lead-generation"
   );
-  const [selectedQuestions, setSelectedQuestions] = useState<string[]>(
-    (widgetConfig?.questions as string[]) ?? PREDEFINED_QUESTIONS["lead-generation"].slice(0, 3)
+  const [selectedObjectives, setSelectedObjectives] = useState<BotObjective[]>(
+    (widgetConfig?.objectives as BotObjective[] | undefined) ??
+      PREDEFINED_OBJECTIVES["lead-generation"]
   );
   const [customQuestionInput, setCustomQuestionInput] = useState("");
 
   useEffect(() => {
-    setSelectedQuestions(PREDEFINED_QUESTIONS[objective].slice(0, 3));
+    setSelectedObjectives(PREDEFINED_OBJECTIVES[objective]);
   }, [objective]);
 
   const baselineRef = useRef<string>("");
@@ -634,7 +610,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
     mode: Mode;
     template: string;
     objective: Objective;
-    selectedQuestions: string[];
+    selectedObjectives: BotObjective[];
     logoUrl: string;
     showBranding: boolean;
     fontFamily: string;
@@ -650,7 +626,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
     mode,
     template,
     objective,
-    selectedQuestions,
+    selectedObjectives,
     logoUrl,
     showBranding,
     fontFamily,
@@ -666,7 +642,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
     mode,
     template,
     objective,
-    selectedQuestions,
+    selectedObjectives,
     logoUrl,
     showBranding,
     fontFamily,
@@ -763,7 +739,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             mode: normalizeWidgetMode(mode),
             template,
             objective,
-            questions: selectedQuestions,
+            objectives: selectedObjectives,
             showBranding,
             fontFamily,
             headerTitle,
@@ -819,9 +795,10 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
       snapshot?.mode ?? (normalizeWidgetMode(widgetConfig?.mode as string) as Mode);
     const objective =
       snapshot?.objective ?? ((widgetConfig?.objective as Objective) ?? "lead-generation");
-    const selectedQuestions =
-      snapshot?.selectedQuestions ??
-      ((widgetConfig?.questions as string[]) ?? PREDEFINED_QUESTIONS[objective].slice(0, 3));
+    const selectedObjectives =
+      snapshot?.selectedObjectives ??
+      ((widgetConfig?.objectives as BotObjective[] | undefined) ??
+        PREDEFINED_OBJECTIVES[objective]);
     const logoUrl =
       snapshot?.logoUrl ??
       (((widgetConfig?.brand as Record<string, unknown>)?.logoUrl as string) ?? "");
@@ -852,11 +829,11 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
     setTemplateConfirmed(true);
     templateSelections.current = { [modeToTemplateType(mode)]: template };
     confirmedTypes.current = new Set([modeToTemplateType(mode)]);
-    // The [objective] effect re-applies default questions when objective changes;
-    // restore the saved questions after it runs.
-    setTimeout(() => setSelectedQuestions(selectedQuestions), 0);
+    // The [objective] effect re-applies default objectives when objective changes;
+    // restore the saved objectives after it runs.
+    setTimeout(() => setSelectedObjectives(selectedObjectives), 0);
     // Mark the reverted values as the new baseline immediately so we are no
-    // longer considered dirty (the selectedQuestions state settles via the
+    // longer considered dirty (the selectedObjectives state settles via the
     // timeout above, but the baseline already reflects the reverted value).
     baselineRef.current = JSON.stringify({
       botName,
@@ -866,7 +843,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
       mode,
       template,
       objective,
-      selectedQuestions,
+      selectedObjectives,
       logoUrl,
       showBranding,
       fontFamily,
@@ -899,6 +876,68 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   const snippets = snippetPlatforms.map(
     ([label, snippet]) => [label, snippet.replace(/##CLIENT_ID##/g, clientId)] as [string, string],
   );
+
+  // --- Objective helpers -------------------------------------------------
+  const isObjectiveEnabled = (target: BotObjective) =>
+    selectedObjectives.some((o) => o.objective === target.objective && o.enabled);
+
+  const toggleObjective = (predef: BotObjective) => {
+    setSelectedObjectives((prev) => {
+      const existing = prev.find((o) => o.objective === predef.objective);
+      if (existing) {
+        return prev.map((o) =>
+          o.objective === predef.objective ? { ...o, enabled: !o.enabled } : o
+        );
+      }
+      return [...prev, { ...predef, enabled: true }];
+    });
+  };
+
+  const addCustomObjective = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setSelectedObjectives((prev) => {
+      if (prev.some((o) => o.objective.toLowerCase() === trimmed.toLowerCase())) return prev;
+      return [
+        ...prev,
+        {
+          id: `custom_${Date.now().toString(36)}`,
+          type: "custom",
+          objective: trimmed,
+          enabled: true,
+          priority: prev.length + 1,
+        },
+      ];
+    });
+    setCustomQuestionInput("");
+  };
+
+  const activeObjectives = [...selectedObjectives]
+    .filter((o) => o.enabled)
+    .sort((a, b) => a.priority - b.priority);
+
+  const reorderObjective = (fromIndex: number, toIndex: number) => {
+    const list = [...activeObjectives];
+    if (toIndex < 0 || toIndex >= list.length) return;
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, moved);
+    const order = list.map((o) => o.id);
+    setSelectedObjectives((prev) =>
+      prev.map((o, i) => ({
+        ...o,
+        priority: order.indexOf(o.id) === -1 ? o.priority || i + 1 : order.indexOf(o.id) + 1,
+      }))
+    );
+  };
+
+  const removeObjective = (target: BotObjective) => {
+    setSelectedObjectives((prev) =>
+      target.type === "custom"
+        ? prev.filter((o) => o.id !== target.id)
+        : prev.map((o) => (o.id === target.id ? { ...o, enabled: false } : o))
+    );
+  };
+  // -----------------------------------------------------------------------
 
   return (
     <div className="space-y-6">
@@ -1141,7 +1180,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Bot Objective</h2>
             <p className="text-sm text-slate-500">
-              Define what your bot is here to do and which questions it should ask.
+              Define what your bot is here to do and which objectives it should naturally achieve.
             </p>
           </div>
 
@@ -1188,20 +1227,21 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             </div>
           </div>
 
-          {/* Section 2 - Predefined Questions */}
+          {/* Section 2 - Conversation Objectives */}
           <div className="space-y-3">
             <div>
-              <Label className="text-base">Select questions to ask</Label>
+              <Label className="text-base">Conversation Objectives</Label>
               <p className="text-xs text-slate-500 mt-0.5">
-                These will be used by the bot to collect information from visitors.
+                Select the information LeadPilot should naturally learn while helping visitors.
+                LeadPilot will decide the best time and wording automatically.
               </p>
             </div>
             <div className="space-y-2">
-              {PREDEFINED_QUESTIONS[objective].map((question) => {
-                const isChecked = selectedQuestions.includes(question);
+              {PREDEFINED_OBJECTIVES[objective].map((predef) => {
+                const isChecked = isObjectiveEnabled(predef);
                 return (
                   <label
-                    key={question}
+                    key={predef.objective}
                     className={cn(
                       "flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors",
                       isChecked
@@ -1212,83 +1252,70 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                     <input
                       type="checkbox"
                       checked={isChecked}
-                      onChange={() => {
-                        setSelectedQuestions((prev) =>
-                          isChecked
-                            ? prev.filter((q) => q !== question)
-                            : [...prev, question]
-                        );
-                      }}
+                      onChange={() => toggleObjective(predef)}
                       className="accent-violet-600 w-4 h-4 rounded"
                     />
-                    <span className="text-sm text-slate-700">{question}</span>
+                    <span className="text-sm text-slate-700">{predef.objective}</span>
                   </label>
                 );
               })}
             </div>
           </div>
 
-          {/* Section 3 - Custom Questions */}
+          {/* Section 3 - Custom Objectives */}
           <div className="space-y-3">
-            <Label className="text-base">Add a custom question</Label>
+            <Label className="text-base">Custom Objective</Label>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Tell LeadPilot what additional information it should naturally learn during
+              conversations. These are goals for the AI, not literal questions. Examples: Understand
+              whether the visitor already uses another CRM. Determine how many employees the company
+              has. Learn which software the visitor currently uses.
+            </p>
             <div className="flex gap-2">
               <Input
                 value={customQuestionInput}
                 onChange={(e) => setCustomQuestionInput(e.target.value)}
-                placeholder="Type your own question..."
+                placeholder="e.g. Understand whether the visitor wants a demo"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    const trimmed = customQuestionInput.trim();
-                    if (trimmed && !selectedQuestions.includes(trimmed)) {
-                      setSelectedQuestions((prev) => [...prev, trimmed]);
-                    }
-                    setCustomQuestionInput("");
+                    addCustomObjective(customQuestionInput);
                   }
                 }}
               />
-        <Button
-          type="button"
-          className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
-          onClick={() => {
-            const trimmed = customQuestionInput.trim();
-            if (trimmed && !selectedQuestions.includes(trimmed)) {
-              setSelectedQuestions((prev) => [...prev, trimmed]);
-            }
-            setCustomQuestionInput("");
-          }}
-        >
-          Add
-        </Button>
+              <Button
+                type="button"
+                className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+                onClick={() => addCustomObjective(customQuestionInput)}
+              >
+                Add
+              </Button>
             </div>
           </div>
 
-          {/* Section 4 - Selected Questions Summary + Reorder */}
-          {selectedQuestions.length > 0 && (
+          {/* Section 4 - Objective priority */}
+          {activeObjectives.length > 0 && (
             <div className="space-y-3">
               <div>
-                <Label className="text-base">Question priority</Label>
+                <Label className="text-base">Objective priority</Label>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  The bot will ask these in order. Click the arrows to reorder, click × to remove.
+                  LeadPilot treats these as goals, not a script. Lower items are lower priority.
+                  Click the arrows to reorder, click × to remove.
                 </p>
               </div>
               <div className="space-y-2">
-                {selectedQuestions.map((question, index) => (
+                {activeObjectives.map((obj, index) => (
                   <div
-                    key={question}
+                    key={obj.id}
                     className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5"
                   >
                     <span className="text-xs font-mono text-slate-400 w-5 text-center">{index + 1}</span>
-                    <span className="flex-1 text-sm text-slate-700">{question}</span>
+                    <span className="flex-1 text-sm text-slate-700">{obj.objective}</span>
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
                         disabled={index === 0}
-                        onClick={() => {
-                          const updated = [...selectedQuestions];
-                          [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
-                          setSelectedQuestions(updated);
-                        }}
+                        onClick={() => reorderObjective(index, index - 1)}
                         className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         aria-label="Move up"
                       >
@@ -1296,12 +1323,8 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                       </button>
                       <button
                         type="button"
-                        disabled={index === selectedQuestions.length - 1}
-                        onClick={() => {
-                          const updated = [...selectedQuestions];
-                          [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
-                          setSelectedQuestions(updated);
-                        }}
+                        disabled={index === activeObjectives.length - 1}
+                        onClick={() => reorderObjective(index, index + 1)}
                         className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         aria-label="Move down"
                       >
@@ -1309,9 +1332,9 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                       </button>
                       <button
                         type="button"
-                        onClick={() => setSelectedQuestions((prev) => prev.filter((q) => q !== question))}
+                        onClick={() => removeObjective(obj)}
                         className="p-1 rounded hover:bg-red-100 hover:text-red-600 transition-colors text-slate-400"
-                        aria-label="Remove question"
+                        aria-label="Remove objective"
                       >
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                       </button>
