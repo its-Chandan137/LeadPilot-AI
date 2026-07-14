@@ -151,6 +151,7 @@ enum SourceType {
   TEXT
   DOCUMENT
   URL
+  SOCIAL
 }
 
 enum SourceStatus {

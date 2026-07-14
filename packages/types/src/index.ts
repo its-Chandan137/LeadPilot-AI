@@ -28,7 +28,8 @@ export type WidgetTemplateStyle =
   | "split"
   | "tabbed"
   | "unified"
-  | "dock-style";
+  | "dock-style"
+  | "fusion";
 
 /** IDs are `{type}-{style}`, e.g. `chatonly-classic`, `both-modern`, `voiceonly-orb`. */
 export type WidgetTemplate = `${WidgetTemplateType}-${WidgetTemplateStyle}` | string;
@@ -105,6 +106,20 @@ export function isDockStyleTemplate(template?: string): boolean {
     template === "dock-style-chat" ||
     template === "dock-style-voice" ||
     template === "dock-style-both"
+  );
+}
+export function isFusionTemplate(template?: string): boolean {
+  if (!template) return false;
+
+  const { style } = parseTemplateId(template);
+
+  if (style === "fusion") return true;
+
+  return (
+    template === "fusion" ||
+    template === "fusion-chat" ||
+    template === "fusion-voice" ||
+    template === "fusion-both"
   );
 }
 

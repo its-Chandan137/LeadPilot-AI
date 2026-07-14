@@ -12,8 +12,6 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 
   const embedding = response.embeddings![0].values!;
 
-  console.log("Embedding dimension:", embedding.length);
-
   return embedding;
 }
 

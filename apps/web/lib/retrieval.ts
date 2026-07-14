@@ -2,6 +2,8 @@ import { getSharedPrismaClient } from "./prisma";
 import { generateEmbedding } from "./embeddings";
 import { logger } from "./logger";
 
+const MAX_CHUNK_CHARS = 1000;
+
 export async function retrieveRelevantChunks(
   projectId: string,
   query: string,
@@ -23,7 +25,7 @@ export async function retrieveRelevantChunks(
       limit
     );
 
-    return results.map((r) => r.content);
+    return results.map((r) => r.content.slice(0, MAX_CHUNK_CHARS));
   } catch (error) {
     logger.error(error);
     return [];

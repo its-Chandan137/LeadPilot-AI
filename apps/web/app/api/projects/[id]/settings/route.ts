@@ -14,6 +14,8 @@ const bodySchema = z.object({
     template: z.string().trim().optional(),
     provider: z.enum(["groq", "livekit-openai", "sarvam"]).optional(),
     brand: z.any().optional(),
+    objective: z.enum(["lead-generation", "customer-support", "general-information"]).optional(),
+    questions: z.array(z.string()).optional(),
   }).optional(),
 });
 
@@ -92,6 +94,8 @@ export async function PUT(
     if (updates.provider !== undefined) newWidgetConfig.provider = updates.provider;
     else newWidgetConfig.provider = newWidgetConfig.provider ?? "groq";
     if (updates.brand !== undefined) newWidgetConfig.brand = updates.brand;
+    if (updates.objective !== undefined) newWidgetConfig.objective = updates.objective;
+    if (updates.questions !== undefined) newWidgetConfig.questions = updates.questions;
 
     const updated = await prisma.project.update({
       where: { id: project.id },

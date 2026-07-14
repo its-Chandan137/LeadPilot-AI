@@ -16,11 +16,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CommonDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { Paintbrush, Code, BarChart3, Cpu, Mic, Check, Eye } from "lucide-react";
+import { Paintbrush, Code, BarChart3, Cpu, Mic, Check, Eye, Target } from "lucide-react";
 import { CopySnippet } from "@/components/ui/copy-snippet";
 import { BrandSection } from "@/components/widget-settings/brand-section";
 
-type Tab = "setup" | "appearance" | "snippet" | "analytics";
+type Tab = "objective" | "setup" | "appearance" | "snippet" | "analytics";
 type Mode = "chat" | "voice" | "both";
 type Provider = WidgetProvider;
 
@@ -41,6 +41,7 @@ type Props = {
 };
 
 const tabs: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: "objective", label: "Bot Objective", icon: Target },
   { key: "setup", label: "Widget Setup", icon: Cpu },
   { key: "appearance", label: "Appearance", icon: Paintbrush },
   { key: "snippet", label: "Embed Snippet", icon: Code },
@@ -109,6 +110,7 @@ function defineTemplates(
 const TEMPLATES: TemplateDef[] = [
   ...defineTemplates("chatonly", [
     { style: "classic", name: "Classic" },
+    { style: "fusion", name: "Fusion" },
     { style: "dock-style", name: "Dock Style" },
     { style: "modern", name: "Modern" },
     { style: "minimal", name: "Minimal", comingSoon: true },
@@ -118,6 +120,7 @@ const TEMPLATES: TemplateDef[] = [
   ...defineTemplates("voiceonly", [
     { style: "classic", name: "Classic" },
     { style: "dock-style", name: "Dock Style" },
+    { style: "fusion", name: "Fusion" },
     { style: "modern", name: "Modern" },
     { style: "minimal", name: "Minimal", comingSoon: true },
     { style: "card", name: "Card", comingSoon: true },
@@ -126,6 +129,7 @@ const TEMPLATES: TemplateDef[] = [
   ...defineTemplates("both", [
     { style: "classic", name: "Classic" },
     { style: "dock-style", name: "Dock Style" },
+    { style: "fusion", name: "Fusion" },
     { style: "modern", name: "Modern" },
     { style: "split", name: "Split", comingSoon: true },
     { style: "tabbed", name: "Tabbed", comingSoon: true },
@@ -137,6 +141,40 @@ function PhoneGlyph({ size = 11 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="white" aria-hidden="true">
       <path d="M6.5 4h3l1.5 4.5-2 1.2a12 12 0 0 0 5.3 5.3l1.2-2L21.5 14v3a1.5 1.5 0 0 1-1.6 1.5C10.2 18.5 5.5 13.8 5 7.1A1.5 1.5 0 0 1 6.5 4z" />
+    </svg>
+  );
+}
+function MicGlyph({ size = 11 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"
+        fill="white"
+      />
+      <path
+        d="M19 11a7 7 0 0 1-14 0"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 18v3"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9 21h6"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -260,14 +298,42 @@ function TemplatePreview({ value }: { value: string; color?: string }) {
                 )}
               </div>
             </div>
-            {type === "both" && (
+            {/* {type === "both" && (
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--preview-brand)] text-white shadow-sm">
                 <svg width={9} height={9} viewBox="0 0 24 24" fill="white" aria-hidden="true">
                   <path d="M6.5 4h3l1.5 4.5-2 1.2a12 12 0 0 0 5.3 5.3l1.2-2L21.5 14v3a1.5 1.5 0 0 1-1.6 1.5C10.2 18.5 5.5 13.8 5 7.1A1.5 1.5 0 0 1 6.5 4z" />
                 </svg>
               </div>
-            )}
+            )} */}
           </div>
+        </div>
+      );
+    case "fusion":
+      return (
+        <div className="relative w-full h-full bg-slate-50 flex items-end justify-center p-2">
+          {isVoice ? (
+            // Voice Only
+            <div className="flex items-center justify-center w-[30%] rounded-full border border-slate-200 bg-white shadow-sm px-2 py-1">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--preview-brand)]">
+                <MicGlyph size={15} />
+              </div>
+            </div>
+          ) : (
+            // Chat Only + Chat & Voice
+            <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white shadow-sm px-2 py-1">
+              {isBoth && (
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--preview-brand)]">
+                  <MicGlyph size={11} />
+                </div>
+              )}
+
+              <div className="h-2 w-2 rounded-full bg-slate-300" />
+
+              <div className="w-12 h-1 rounded-full bg-slate-100" />
+
+              <div className="h-2.5 w-2.5 rounded-full bg-[var(--preview-brand)]" />
+            </div>
+          )}
         </div>
       );
     default:
@@ -474,7 +540,7 @@ const snippetPlatforms: [string, string][] = [
 export function WidgetSettingsClient({ projectId, projectName, clientId, widgetConfig, apiUrl }: Props) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const initialTab: Tab = tabParam === "snippet" || tabParam === "appearance" || tabParam === "analytics" ? tabParam : "setup";
+  const initialTab: Tab = tabParam === "setup" || tabParam === "snippet" || tabParam === "appearance" || tabParam === "analytics" ? tabParam : "objective";
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [botName, setBotName] = useState((widgetConfig?.botName as string) ?? "LeadPilot");
   const [color, setColor] = useState((widgetConfig?.color as string) ?? "#2563eb");
@@ -499,6 +565,47 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   const [logoUrl, setLogoUrl] = useState(((widgetConfig?.brand as Record<string, unknown>)?.logoUrl as string) ?? "");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  type Objective = "lead-generation" | "customer-support" | "general-information";
+
+  const PREDEFINED_QUESTIONS: Record<Objective, string[]> = {
+    "lead-generation": [
+      "What is your name?",
+      "What is your email address?",
+      "What is your phone number?",
+      "What is your company name?",
+      "What is your budget range?",
+      "When are you looking to get started?",
+      "What service are you interested in?",
+    ],
+    "customer-support": [
+      "What product or service are you having issues with?",
+      "How long have you been experiencing this issue?",
+      "What is your order or account number?",
+      "Have you tried any troubleshooting steps?",
+      "What is the best way to contact you?",
+    ],
+    "general-information": [
+      "What services do you offer?",
+      "What are your business hours?",
+      "Where are you located?",
+      "How can I contact your team?",
+      "What are your pricing plans?",
+      "Do you offer a free trial?",
+    ],
+  };
+
+  const [objective, setObjective] = useState<Objective>(
+    (widgetConfig?.objective as Objective) ?? "lead-generation"
+  );
+  const [selectedQuestions, setSelectedQuestions] = useState<string[]>(
+    (widgetConfig?.questions as string[]) ?? PREDEFINED_QUESTIONS["lead-generation"].slice(0, 3)
+  );
+  const [customQuestionInput, setCustomQuestionInput] = useState("");
+
+  useEffect(() => {
+    setSelectedQuestions(PREDEFINED_QUESTIONS[objective].slice(0, 3));
+  }, [objective]);
 
   const isProviderGroq = provider === "groq";
   const templateType = modeToTemplateType(mode);
@@ -578,6 +685,8 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             provider,
             mode: normalizeWidgetMode(mode),
             template,
+            objective,
+            questions: selectedQuestions,
             ...(brandPayload !== undefined ? { brand: brandPayload } : {}),
           },
         }),
@@ -821,6 +930,204 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
           />
         )}
       </CommonDialog>
+
+      {activeTab === "objective" && (
+        <form onSubmit={handleSave} className="rounded-xl border border-slate-200 bg-white p-6 space-y-8">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Bot Objective</h2>
+            <p className="text-sm text-slate-500">
+              Define what your bot is here to do and which questions it should ask.
+            </p>
+          </div>
+
+          {/* Section 1 - Objective Selector */}
+          <div className="space-y-3">
+            <Label className="text-base">What is the main goal of your bot?</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                {
+                  value: "lead-generation" as Objective,
+                  label: "Lead Generation",
+                  description: "Capture contact info and qualify prospects",
+                  icon: "🎯",
+                },
+                {
+                  value: "customer-support" as Objective,
+                  label: "Customer Support",
+                  description: "Help users resolve issues and answer queries",
+                  icon: "🛠️",
+                },
+                {
+                  value: "general-information" as Objective,
+                  label: "General Information",
+                  description: "Answer questions about your business",
+                  icon: "💡",
+                },
+              ].map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setObjective(item.value)}
+                  className={cn(
+                    "rounded-lg border-2 px-4 py-4 text-left transition-colors",
+                    objective === item.value
+                      ? "border-violet-600 bg-[#EDE9FE] ring-1 ring-violet-600"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
+                  )}
+                >
+                  <div className="text-2xl mb-2">{item.icon}</div>
+                  <div className="font-semibold text-slate-900 text-sm mb-1">{item.label}</div>
+                  <p className="text-xs text-slate-500">{item.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Section 2 - Predefined Questions */}
+          <div className="space-y-3">
+            <div>
+              <Label className="text-base">Select questions to ask</Label>
+              <p className="text-xs text-slate-500 mt-0.5">
+                These will be used by the bot to collect information from visitors.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {PREDEFINED_QUESTIONS[objective].map((question) => {
+                const isChecked = selectedQuestions.includes(question);
+                return (
+                  <label
+                    key={question}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors",
+                      isChecked
+                        ? "border-violet-300 bg-violet-50"
+                        : "border-slate-200 bg-white hover:bg-slate-50"
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => {
+                        setSelectedQuestions((prev) =>
+                          isChecked
+                            ? prev.filter((q) => q !== question)
+                            : [...prev, question]
+                        );
+                      }}
+                      className="accent-violet-600 w-4 h-4 rounded"
+                    />
+                    <span className="text-sm text-slate-700">{question}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Section 3 - Custom Questions */}
+          <div className="space-y-3">
+            <Label className="text-base">Add a custom question</Label>
+            <div className="flex gap-2">
+              <Input
+                value={customQuestionInput}
+                onChange={(e) => setCustomQuestionInput(e.target.value)}
+                placeholder="Type your own question..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const trimmed = customQuestionInput.trim();
+                    if (trimmed && !selectedQuestions.includes(trimmed)) {
+                      setSelectedQuestions((prev) => [...prev, trimmed]);
+                    }
+                    setCustomQuestionInput("");
+                  }
+                }}
+              />
+        <Button
+          type="button"
+          className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+          onClick={() => {
+            const trimmed = customQuestionInput.trim();
+            if (trimmed && !selectedQuestions.includes(trimmed)) {
+              setSelectedQuestions((prev) => [...prev, trimmed]);
+            }
+            setCustomQuestionInput("");
+          }}
+        >
+          Add
+        </Button>
+            </div>
+          </div>
+
+          {/* Section 4 - Selected Questions Summary + Reorder */}
+          {selectedQuestions.length > 0 && (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-base">Question priority</Label>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  The bot will ask these in order. Click the arrows to reorder, click × to remove.
+                </p>
+              </div>
+              <div className="space-y-2">
+                {selectedQuestions.map((question, index) => (
+                  <div
+                    key={question}
+                    className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5"
+                  >
+                    <span className="text-xs font-mono text-slate-400 w-5 text-center">{index + 1}</span>
+                    <span className="flex-1 text-sm text-slate-700">{question}</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => {
+                          const updated = [...selectedQuestions];
+                          [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+                          setSelectedQuestions(updated);
+                        }}
+                        className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        aria-label="Move up"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 9V3M3 6l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === selectedQuestions.length - 1}
+                        onClick={() => {
+                          const updated = [...selectedQuestions];
+                          [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+                          setSelectedQuestions(updated);
+                        }}
+                        className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        aria-label="Move down"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 3v6M9 6L6 9 3 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedQuestions((prev) => prev.filter((q) => q !== question))}
+                        className="p-1 rounded hover:bg-red-100 hover:text-red-600 transition-colors text-slate-400"
+                        aria-label="Remove question"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {toast && (
+            <p className={`text-sm ${toast.includes("Failed") ? "text-red-600" : "text-emerald-600"}`}>
+              {toast}
+            </p>
+          )}
+
+          <Button type="submit" disabled={saving}>
+            {saving ? "Saving..." : "Save Objective"}
+          </Button>
+        </form>
+      )}
 
       {activeTab === "appearance" && (
         <form onSubmit={handleSave} className="rounded-xl border border-slate-200 bg-white p-6 space-y-5">
