@@ -10,6 +10,13 @@ type StoredConversation = {
   visitorId: string;
 };
 
+// A single turn as understood by the chat model. Roles are limited to the two
+// roles the assistant actually participates in.
+type HistoryMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 type WidgetConfigJson = {
   color?: string;
   botName?: string;
@@ -41,6 +48,15 @@ const demoProject: StoredProject = {
 };
 
 const memoryConversations = new Map<string, StoredConversation>();
+
+// In-memory transcript per conversation (used only when no database is configured).
+const memoryMessages = new Map<string, HistoryMessage[]>();
+
+// Maximum number of prior turns to send to the model. Kept as a single source of
+// truth so the limit is easy to tune in one place.
+const CONVERSATION_HISTORY_LIMIT = Number(
+  process.env.MAX_HISTORY_MESSAGES ?? 20
+);
 
 function getPrisma() {
   if (!getDatabaseUrl()) {
@@ -151,6 +167,7 @@ export async function saveChatTurn(input: {
   if (!prisma) {
     const existing = memoryConversations.get(input.conversationId);
     if (existing && existing.projectId === project.id && existing.visitorId === input.visitorId) {
+      recordMemoryTurn(input.conversationId, input.message, input.reply);
       return true;
     }
 
@@ -158,6 +175,7 @@ export async function saveChatTurn(input: {
       return false;
     }
 
+    recordMemoryTurn(input.conversationId, input.message, input.reply);
     return true;
   }
 
@@ -192,6 +210,40 @@ export async function saveChatTurn(input: {
   ]);
 
   return true;
+}
+
+// Records a user/assistant turn into the in-memory transcript (no-database mode).
+function recordMemoryTurn(conversationId: string, message: string, reply: string) {
+  const turns = memoryMessages.get(conversationId) ?? [];
+  turns.push({ role: "user", content: message });
+  turns.push({ role: "assistant", content: reply });
+  memoryMessages.set(conversationId, turns);
+}
+
+// Returns the chronological transcript for a conversation, limited to the most
+// recent turns so the request stays bounded.
+export async function getConversationHistory(
+  conversationId: string,
+  limit = CONVERSATION_HISTORY_LIMIT
+): Promise<HistoryMessage[]> {
+  const prisma = getPrisma();
+
+  if (!prisma) {
+    const turns = memoryMessages.get(conversationId) ?? [];
+    return turns.slice(-limit);
+  }
+
+  const messages = await prisma.message.findMany({
+    where: { conversationId },
+    orderBy: { createdAt: "asc" },
+    take: limit,
+    select: { role: true, content: true }
+  });
+
+  return messages.map((m) => ({
+    role: m.role === "ASSISTANT" ? "assistant" : "user",
+    content: m.content
+  }));
 }
 
 export async function createProject(input: {
