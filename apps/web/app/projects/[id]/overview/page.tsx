@@ -3,6 +3,7 @@ import { MessageSquare, Users, BookOpen, Calendar, Globe, Fingerprint } from "lu
 import Link from "next/link";
 import { CopyButton } from "./copy-button";
 import { EmbedSnippetSelector } from "./embed-snippet-selector";
+import { DashboardWidgets } from "@/components/crm/DashboardWidgets";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +105,11 @@ export default async function ProjectOverviewPage({ params }: { params: { id: st
           <EmbedSnippetSelector clientId={project.clientId} apiUrl={apiUrl} />
         </div>
       )}
+
+      <div>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">Live Intelligence</h2>
+        <DashboardWidgets projectId={params.id} />
+      </div>
     </div>
   );
 }

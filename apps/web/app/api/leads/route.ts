@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { corsHeaders, fail, ok } from "@/lib/api-response";
 import { createClient } from "@/lib/supabase/server";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { getEnrichedLeads } from "@/lib/crm";
 
 const querySchema = z.object({
   projectId: z.string().cuid().optional(),
@@ -14,6 +14,19 @@ const querySchema = z.object({
   dateRange: z.enum(["today", "7days", "30days", "all"]).default("all"),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(25),
+  qualification: z.string().optional(),
+  industry: z.string().optional(),
+  businessType: z.string().optional(),
+  visitorStage: z.string().optional(),
+  goal: z.string().optional(),
+  strategy: z.string().optional(),
+  mission: z.string().optional(),
+  recommendedAction: z.string().optional(),
+  engagementMin: z.coerce.number().int().min(0).max(100).optional(),
+  conversationQuality: z.string().optional(),
+  product: z.string().optional(),
+  painPoint: z.string().optional(),
+  hasTimeline: z.enum(["true", "false"]).optional(),
 });
 
 export async function OPTIONS() {
@@ -42,59 +55,54 @@ export async function GET(request: Request) {
       dateRange: searchParams.get("dateRange") ?? "all",
       page: searchParams.get("page") ?? "1",
       limit: searchParams.get("limit") ?? "25",
+      qualification: searchParams.get("qualification") ?? undefined,
+      industry: searchParams.get("industry") ?? undefined,
+      businessType: searchParams.get("businessType") ?? undefined,
+      visitorStage: searchParams.get("visitorStage") ?? undefined,
+      goal: searchParams.get("goal") ?? undefined,
+      strategy: searchParams.get("strategy") ?? undefined,
+      mission: searchParams.get("mission") ?? undefined,
+      recommendedAction: searchParams.get("recommendedAction") ?? undefined,
+      engagementMin: searchParams.get("engagementMin") ?? undefined,
+      conversationQuality: searchParams.get("conversationQuality") ?? undefined,
+      product: searchParams.get("product") ?? undefined,
+      painPoint: searchParams.get("painPoint") ?? undefined,
+      hasTimeline: searchParams.get("hasTimeline") ?? undefined,
     });
     if (!parsed.success) return fail("Invalid query parameters");
 
-    const { projectId, status, score, search, dateRange, page, limit } = parsed.data;
-    const offset = (page - 1) * limit;
+    const { page, limit, qualification, industry, businessType, visitorStage, goal, strategy, mission, recommendedAction, engagementMin, conversationQuality, product, painPoint, hasTimeline, ...rest } = parsed.data;
 
-    const conditions: Prisma.Sql[] = [Prisma.sql`p."workspaceId" = ${membership.workspaceId}`];
+    const result = await getEnrichedLeads({
+      workspaceId: membership.workspaceId,
+      projectId: rest.projectId,
+      status: rest.status,
+      score: rest.score,
+      search: rest.search,
+      dateRange: rest.dateRange,
+      page,
+      limit,
+      filters: {
+        qualification,
+        industry,
+        businessType,
+        visitorStage,
+        goal,
+        strategy,
+        mission,
+        recommendedAction,
+        engagementMin,
+        conversationQuality,
+        product,
+        painPoint,
+        hasTimeline: hasTimeline === "true" ? true : hasTimeline === "false" ? false : undefined
+      }
+    });
 
-    if (projectId) conditions.push(Prisma.sql`l."projectId" = ${projectId}`);
-    if (status) conditions.push(Prisma.sql`l.status = CAST(${status} AS "LeadStatus")`);
-    if (score) conditions.push(Prisma.sql`l.score = CAST(${score} AS "LeadScore")`);
-
-    if (search) {
-      const term = `%${search}%`;
-      conditions.push(Prisma.sql`(
-        l.name ILIKE ${term} OR l.email ILIKE ${term} OR l.phone ILIKE ${term}
-        OR l."visitorId" ILIKE ${term} OR p.name ILIKE ${term}
-      )`);
-    }
-
-    if (dateRange === "today") conditions.push(Prisma.sql`l."createdAt" >= CURRENT_DATE`);
-    else if (dateRange === "7days") conditions.push(Prisma.sql`l."createdAt" >= CURRENT_DATE - INTERVAL '7 days'`);
-    else if (dateRange === "30days") conditions.push(Prisma.sql`l."createdAt" >= CURRENT_DATE - INTERVAL '30 days'`);
-
-    const where = Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`;
-
-    const leads = await prisma.$queryRaw<{
-      id: string; name: string | null; email: string | null; phone: string | null;
-      visitorId: string; score: string; status: string; source: string;
-      createdAt: Date; updatedAt: Date;
-      project: { id: string; name: string };
-    }[]>`
-      SELECT l.id, l.name, l.email, l.phone, l."visitorId",
-             l.score, l.status, l.source, l."createdAt", l."updatedAt",
-             json_build_object('id', p.id, 'name', p.name) AS project
-      FROM "Lead" l
-      JOIN "Project" p ON l."projectId" = p.id
-      ${where}
-      ORDER BY l."createdAt" DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `;
-
-    const countResult = await prisma.$queryRaw<{ total: number }[]>`
-      SELECT COUNT(*)::int AS total
-      FROM "Lead" l
-      JOIN "Project" p ON l."projectId" = p.id
-      ${where}
-    `;
-
-    const total = countResult[0]?.total ?? 0;
-    const totalPages = Math.ceil(total / limit);
-
-    return ok({ leads, pagination: { page, limit, total, totalPages } });
+    return ok({
+      leads: result.leads,
+      pagination: { page: result.page, limit: result.limit, total: result.total, totalPages: result.totalPages }
+    });
   } catch (error) {
     logger.error(error);
     return fail("Unable to fetch leads", 500);

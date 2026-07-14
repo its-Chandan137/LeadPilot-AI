@@ -49,7 +49,36 @@ export type WidgetConfig = {
   template?: string;
   livekitUrl?: string;
   provider?: WidgetProvider;
+  /** Structured conversation objectives (replaces the legacy `questions` list). */
+  objectives?: BotObjective[];
 };
+
+/** Kind of information an objective targets. */
+export type ObjectiveType =
+  | "name"
+  | "email"
+  | "phone"
+  | "company"
+  | "budget"
+  | "timeline"
+  | "service"
+  | "custom";
+
+/** Lifecycle status of an objective within a conversation. */
+export type ObjectiveStatus = "pending" | "completed" | "skipped" | "unavailable";
+
+/**
+ * A single conversation objective. Objectives are goals the AI should
+ * naturally achieve (not scripted questions). Stored per project so future
+ * analytics can reason over them.
+ */
+export interface BotObjective {
+  id: string;
+  type: ObjectiveType;
+  objective: string;
+  enabled: boolean;
+  priority: number;
+}
 
 export function normalizeWidgetMode(value?: string): WidgetMode {
   const mode = value?.trim().toLowerCase();
