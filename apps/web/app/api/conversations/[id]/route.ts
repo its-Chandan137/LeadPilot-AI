@@ -4,6 +4,7 @@ import { corsHeaders, fail, ok } from "@/lib/api-response";
 import { createClient } from "@/lib/supabase/server";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { getPersistedIntelligence } from "@/lib/crm";
 
 const paramsSchema = z.object({
   id: z.string().cuid()
@@ -86,7 +87,8 @@ export async function GET(
       },
       project: conversation.project,
       lead,
-      messages: conversation.messages
+      messages: conversation.messages,
+      intelligence: await getPersistedIntelligence(conversation.id)
     });
   } catch (error) {
     logger.error(error);

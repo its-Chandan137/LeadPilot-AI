@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 model User {
@@ -180,4 +180,63 @@ model VoiceMessage {
   content            String
   createdAt          DateTime          @default(now())
   voiceConversation  VoiceConversation @relation(fields: [voiceConversationId], references: [id], onDelete: Cascade)
+}
+
+// --- Durable Intelligence Persistence (replaces in-memory Maps) -----------
+// ConversationId is the shared relationship key. We never duplicate the base
+// Conversation / Lead tables — these models only hold AI-generated intelligence.
+
+model ConversationIntelligence {
+  conversationId String   @id
+  projectId      String?
+  data           Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model LeadProfile {
+  conversationId String   @id
+  projectId      String?
+  data           Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model BusinessProfile {
+  conversationId String   @id
+  projectId      String?
+  data           Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model AnalyticsSnapshot {
+  conversationId String   @id
+  projectId      String?
+  data           Json
+  updatedAt      DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model TimelineEvent {
+  id            String   @id @default(cuid())
+  conversationId String
+  projectId     String?
+  event         String
+  description   String
+  category      String
+  importance    Int      @default(1)
+  timestamp     DateTime
+  createdAt     DateTime @default(now())
+
+  @@unique([conversationId, event, description])
+  @@index([conversationId])
+  @@index([projectId])
 }

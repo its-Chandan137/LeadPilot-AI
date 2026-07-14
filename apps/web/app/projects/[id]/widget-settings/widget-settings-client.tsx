@@ -10,15 +10,19 @@ import {
   parseTemplateId,
   type WidgetProvider,
   type WidgetTemplateType,
+  type BotObjective,
 } from "@leadpilot/types";
+import { PREDEFINED_OBJECTIVES, type ProjectObjective } from "@/lib/objectives";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CommonDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { Paintbrush, Code, BarChart3, Cpu, Mic, Check, Eye, Target } from "lucide-react";
+import { Paintbrush, Code, BarChart3, Cpu, Mic, Check, Eye, Target, Upload } from "lucide-react";
 import { CopySnippet } from "@/components/ui/copy-snippet";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { BrandSection } from "@/components/widget-settings/brand-section";
+import { UnsavedChangesPopup } from "@/components/popups/unsaved-changes";
 
 type Tab = "objective" | "setup" | "appearance" | "snippet" | "analytics";
 type Mode = "chat" | "voice" | "both";
@@ -537,6 +541,15 @@ const snippetPlatforms: [string, string][] = [
   ],
 ];
 
+const FONT_OPTIONS: { label: string; value: string }[] = [
+  { label: "Inter (Default)", value: "" },
+  { label: "System UI", value: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
+  { label: "Serif (Georgia)", value: 'Georgia, Cambria, "Times New Roman", serif' },
+  { label: "Monospace", value: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" },
+  { label: "Rounded (Quicksand)", value: 'Quicksand, "Segoe UI", system-ui, sans-serif' },
+  { label: "Poppins", value: 'Poppins, "Segoe UI", system-ui, sans-serif' },
+];
+
 export function WidgetSettingsClient({ projectId, projectName, clientId, widgetConfig, apiUrl }: Props) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -563,49 +576,90 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   });
   const confirmedTypes = useRef<Set<string>>(new Set([initialType]));
   const [logoUrl, setLogoUrl] = useState(((widgetConfig?.brand as Record<string, unknown>)?.logoUrl as string) ?? "");
+  const [showBranding, setShowBranding] = useState(widgetConfig?.showBranding !== false);
+  const [fontFamily, setFontFamily] = useState((widgetConfig?.fontFamily as string) ?? "");
+  const [headerTitle, setHeaderTitle] = useState((widgetConfig?.headerTitle as string) ?? "");
+  const [headerSubtitle, setHeaderSubtitle] = useState((widgetConfig?.headerSubtitle as string) ?? "");
+  const [avatarUrl, setAvatarUrl] = useState((widgetConfig?.avatarUrl as string) ?? "");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [pendingTab, setPendingTab] = useState<Tab | null>(null);
+  const [showUnsaved, setShowUnsaved] = useState(false);
 
-  type Objective = "lead-generation" | "customer-support" | "general-information";
-
-  const PREDEFINED_QUESTIONS: Record<Objective, string[]> = {
-    "lead-generation": [
-      "What is your name?",
-      "What is your email address?",
-      "What is your phone number?",
-      "What is your company name?",
-      "What is your budget range?",
-      "When are you looking to get started?",
-      "What service are you interested in?",
-    ],
-    "customer-support": [
-      "What product or service are you having issues with?",
-      "How long have you been experiencing this issue?",
-      "What is your order or account number?",
-      "Have you tried any troubleshooting steps?",
-      "What is the best way to contact you?",
-    ],
-    "general-information": [
-      "What services do you offer?",
-      "What are your business hours?",
-      "Where are you located?",
-      "How can I contact your team?",
-      "What are your pricing plans?",
-      "Do you offer a free trial?",
-    ],
-  };
+  type Objective = ProjectObjective;
 
   const [objective, setObjective] = useState<Objective>(
     (widgetConfig?.objective as Objective) ?? "lead-generation"
   );
-  const [selectedQuestions, setSelectedQuestions] = useState<string[]>(
-    (widgetConfig?.questions as string[]) ?? PREDEFINED_QUESTIONS["lead-generation"].slice(0, 3)
+  const [selectedObjectives, setSelectedObjectives] = useState<BotObjective[]>(
+    (widgetConfig?.objectives as BotObjective[] | undefined) ??
+      PREDEFINED_OBJECTIVES["lead-generation"]
   );
   const [customQuestionInput, setCustomQuestionInput] = useState("");
 
   useEffect(() => {
-    setSelectedQuestions(PREDEFINED_QUESTIONS[objective].slice(0, 3));
+    setSelectedObjectives(PREDEFINED_OBJECTIVES[objective]);
   }, [objective]);
+
+  const baselineRef = useRef<string>("");
+  const savedSnapshotRef = useRef<null | {
+    botName: string;
+    color: string;
+    welcomeMessage: string;
+    provider: Provider;
+    mode: Mode;
+    template: string;
+    objective: Objective;
+    selectedObjectives: BotObjective[];
+    logoUrl: string;
+    showBranding: boolean;
+    fontFamily: string;
+    headerTitle: string;
+    headerSubtitle: string;
+    avatarUrl: string;
+  }>(null);
+  const stateRef = useRef({
+    botName,
+    color,
+    welcomeMessage,
+    provider,
+    mode,
+    template,
+    objective,
+    selectedObjectives,
+    logoUrl,
+    showBranding,
+    fontFamily,
+    headerTitle,
+    headerSubtitle,
+    avatarUrl,
+  });
+  stateRef.current = {
+    botName,
+    color,
+    welcomeMessage,
+    provider,
+    mode,
+    template,
+    objective,
+    selectedObjectives,
+    logoUrl,
+    showBranding,
+    fontFamily,
+    headerTitle,
+    headerSubtitle,
+    avatarUrl,
+  };
+  const currentSnapshot = () => JSON.stringify(stateRef.current);
+  const syncBaseline = () => {
+    baselineRef.current = currentSnapshot();
+  };
+  const isDirty = baselineRef.current !== "" && baselineRef.current !== currentSnapshot();
+
+  useEffect(() => {
+    const id = setTimeout(syncBaseline, 0);
+    return () => clearTimeout(id);
+  }, []);
 
   const isProviderGroq = provider === "groq";
   const templateType = modeToTemplateType(mode);
@@ -661,11 +715,10 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
     setTemplateConfirmed(true);
   }, [templateType, validTemplates]);
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function performSave(): Promise<boolean> {
     if (!templateConfirmed) {
       setToast("Please select a template before saving");
-      return;
+      return false;
     }
     setSaving(true);
     setToast(null);
@@ -686,7 +739,12 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             mode: normalizeWidgetMode(mode),
             template,
             objective,
-            questions: selectedQuestions,
+            objectives: selectedObjectives,
+            showBranding,
+            fontFamily,
+            headerTitle,
+            headerSubtitle,
+            avatarUrl,
             ...(brandPayload !== undefined ? { brand: brandPayload } : {}),
           },
         }),
@@ -695,15 +753,115 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
       if (json.success) {
         setToast("Settings saved successfully");
         setTimeout(() => setToast(null), 3000);
+        savedSnapshotRef.current = stateRef.current;
+        syncBaseline();
+        return true;
       } else {
         setToast(json.error ?? "Failed to save settings");
+        return false;
       }
     } catch {
       setToast("Failed to save settings");
+      return false;
     } finally {
       setSaving(false);
     }
   }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    await performSave();
+  }
+
+  function requestTabChange(next: Tab) {
+    if (next === activeTab) return;
+    if (isDirty) {
+      setPendingTab(next);
+      setShowUnsaved(true);
+    } else {
+      setActiveTab(next);
+    }
+  }
+
+  function resetForm() {
+    const snapshot = savedSnapshotRef.current;
+    const botName =
+      snapshot?.botName ?? ((widgetConfig?.botName as string) ?? "LeadPilot");
+    const color = snapshot?.color ?? ((widgetConfig?.color as string) ?? "#2563eb");
+    const welcomeMessage =
+      snapshot?.welcomeMessage ?? ((widgetConfig?.welcomeMessage as string) ?? "");
+    const provider = snapshot?.provider ?? ((widgetConfig?.provider as Provider) ?? "groq");
+    const mode =
+      snapshot?.mode ?? (normalizeWidgetMode(widgetConfig?.mode as string) as Mode);
+    const objective =
+      snapshot?.objective ?? ((widgetConfig?.objective as Objective) ?? "lead-generation");
+    const selectedObjectives =
+      snapshot?.selectedObjectives ??
+      ((widgetConfig?.objectives as BotObjective[] | undefined) ??
+        PREDEFINED_OBJECTIVES[objective]);
+    const logoUrl =
+      snapshot?.logoUrl ??
+      (((widgetConfig?.brand as Record<string, unknown>)?.logoUrl as string) ?? "");
+    const showBranding = snapshot?.showBranding ?? (widgetConfig?.showBranding !== false);
+    const fontFamily = snapshot?.fontFamily ?? ((widgetConfig?.fontFamily as string) ?? "");
+    const headerTitle = snapshot?.headerTitle ?? ((widgetConfig?.headerTitle as string) ?? "");
+    const headerSubtitle = snapshot?.headerSubtitle ?? ((widgetConfig?.headerSubtitle as string) ?? "");
+    const avatarUrl = snapshot?.avatarUrl ?? ((widgetConfig?.avatarUrl as string) ?? "");
+    const template =
+      snapshot?.template ??
+      (widgetConfig?.template
+        ? normalizeWidgetTemplate(widgetConfig.template as string, mode)
+        : defaultTemplateFor(mode));
+
+    setBotName(botName);
+    setColor(color);
+    setWelcomeMessage(welcomeMessage);
+    setProvider(provider);
+    setMode(mode);
+    setTemplate(template);
+    setObjective(objective);
+    setLogoUrl(logoUrl);
+    setShowBranding(showBranding);
+    setFontFamily(fontFamily);
+    setHeaderTitle(headerTitle);
+    setHeaderSubtitle(headerSubtitle);
+    setAvatarUrl(avatarUrl);
+    setTemplateConfirmed(true);
+    templateSelections.current = { [modeToTemplateType(mode)]: template };
+    confirmedTypes.current = new Set([modeToTemplateType(mode)]);
+    // The [objective] effect re-applies default objectives when objective changes;
+    // restore the saved objectives after it runs.
+    setTimeout(() => setSelectedObjectives(selectedObjectives), 0);
+    // Mark the reverted values as the new baseline immediately so we are no
+    // longer considered dirty (the selectedObjectives state settles via the
+    // timeout above, but the baseline already reflects the reverted value).
+    baselineRef.current = JSON.stringify({
+      botName,
+      color,
+      welcomeMessage,
+      provider,
+      mode,
+      template,
+      objective,
+      selectedObjectives,
+      logoUrl,
+      showBranding,
+      fontFamily,
+      headerTitle,
+      headerSubtitle,
+      avatarUrl,
+    });
+  }
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   const brandData = useMemo(() => {
     const b = widgetConfig?.brand as Record<string, unknown> | undefined;
@@ -719,6 +877,68 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
     ([label, snippet]) => [label, snippet.replace(/##CLIENT_ID##/g, clientId)] as [string, string],
   );
 
+  // --- Objective helpers -------------------------------------------------
+  const isObjectiveEnabled = (target: BotObjective) =>
+    selectedObjectives.some((o) => o.objective === target.objective && o.enabled);
+
+  const toggleObjective = (predef: BotObjective) => {
+    setSelectedObjectives((prev) => {
+      const existing = prev.find((o) => o.objective === predef.objective);
+      if (existing) {
+        return prev.map((o) =>
+          o.objective === predef.objective ? { ...o, enabled: !o.enabled } : o
+        );
+      }
+      return [...prev, { ...predef, enabled: true }];
+    });
+  };
+
+  const addCustomObjective = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setSelectedObjectives((prev) => {
+      if (prev.some((o) => o.objective.toLowerCase() === trimmed.toLowerCase())) return prev;
+      return [
+        ...prev,
+        {
+          id: `custom_${Date.now().toString(36)}`,
+          type: "custom",
+          objective: trimmed,
+          enabled: true,
+          priority: prev.length + 1,
+        },
+      ];
+    });
+    setCustomQuestionInput("");
+  };
+
+  const activeObjectives = [...selectedObjectives]
+    .filter((o) => o.enabled)
+    .sort((a, b) => a.priority - b.priority);
+
+  const reorderObjective = (fromIndex: number, toIndex: number) => {
+    const list = [...activeObjectives];
+    if (toIndex < 0 || toIndex >= list.length) return;
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, moved);
+    const order = list.map((o) => o.id);
+    setSelectedObjectives((prev) =>
+      prev.map((o, i) => ({
+        ...o,
+        priority: order.indexOf(o.id) === -1 ? o.priority || i + 1 : order.indexOf(o.id) + 1,
+      }))
+    );
+  };
+
+  const removeObjective = (target: BotObjective) => {
+    setSelectedObjectives((prev) =>
+      target.type === "custom"
+        ? prev.filter((o) => o.id !== target.id)
+        : prev.map((o) => (o.id === target.id ? { ...o, enabled: false } : o))
+    );
+  };
+  // -----------------------------------------------------------------------
+
   return (
     <div className="space-y-6">
       <div>
@@ -732,7 +952,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
           return (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => requestTabChange(tab.key)}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.key
                   ? "border-[#7C3AED] text-[#7C3AED]"
                   : "border-transparent text-[#6B7280] hover:text-[#111827]"
@@ -929,14 +1149,38 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             welcomeMessage={welcomeMessage || "Hi! How can I help you Today?"}
           />
         )}
-      </CommonDialog>
+        </CommonDialog>
+
+      <UnsavedChangesPopup
+        open={showUnsaved}
+        saving={saving}
+        onSave={async () => {
+          const ok = await performSave();
+          if (ok) {
+            setShowUnsaved(false);
+            if (pendingTab) setActiveTab(pendingTab);
+            setPendingTab(null);
+          }
+        }}
+        onDiscard={() => {
+          resetForm();
+          setShowUnsaved(false);
+          if (pendingTab) setActiveTab(pendingTab);
+          setPendingTab(null);
+        }}
+        onCancel={() => {
+          setShowUnsaved(false);
+          setPendingTab(null);
+        }}
+      />
+
 
       {activeTab === "objective" && (
         <form onSubmit={handleSave} className="rounded-xl border border-slate-200 bg-white p-6 space-y-8">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Bot Objective</h2>
             <p className="text-sm text-slate-500">
-              Define what your bot is here to do and which questions it should ask.
+              Define what your bot is here to do and which objectives it should naturally achieve.
             </p>
           </div>
 
@@ -983,20 +1227,21 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             </div>
           </div>
 
-          {/* Section 2 - Predefined Questions */}
+          {/* Section 2 - Conversation Objectives */}
           <div className="space-y-3">
             <div>
-              <Label className="text-base">Select questions to ask</Label>
+              <Label className="text-base">Conversation Objectives</Label>
               <p className="text-xs text-slate-500 mt-0.5">
-                These will be used by the bot to collect information from visitors.
+                Select the information LeadPilot should naturally learn while helping visitors.
+                LeadPilot will decide the best time and wording automatically.
               </p>
             </div>
             <div className="space-y-2">
-              {PREDEFINED_QUESTIONS[objective].map((question) => {
-                const isChecked = selectedQuestions.includes(question);
+              {PREDEFINED_OBJECTIVES[objective].map((predef) => {
+                const isChecked = isObjectiveEnabled(predef);
                 return (
                   <label
-                    key={question}
+                    key={predef.objective}
                     className={cn(
                       "flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors",
                       isChecked
@@ -1007,83 +1252,70 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                     <input
                       type="checkbox"
                       checked={isChecked}
-                      onChange={() => {
-                        setSelectedQuestions((prev) =>
-                          isChecked
-                            ? prev.filter((q) => q !== question)
-                            : [...prev, question]
-                        );
-                      }}
+                      onChange={() => toggleObjective(predef)}
                       className="accent-violet-600 w-4 h-4 rounded"
                     />
-                    <span className="text-sm text-slate-700">{question}</span>
+                    <span className="text-sm text-slate-700">{predef.objective}</span>
                   </label>
                 );
               })}
             </div>
           </div>
 
-          {/* Section 3 - Custom Questions */}
+          {/* Section 3 - Custom Objectives */}
           <div className="space-y-3">
-            <Label className="text-base">Add a custom question</Label>
+            <Label className="text-base">Custom Objective</Label>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Tell LeadPilot what additional information it should naturally learn during
+              conversations. These are goals for the AI, not literal questions. Examples: Understand
+              whether the visitor already uses another CRM. Determine how many employees the company
+              has. Learn which software the visitor currently uses.
+            </p>
             <div className="flex gap-2">
               <Input
                 value={customQuestionInput}
                 onChange={(e) => setCustomQuestionInput(e.target.value)}
-                placeholder="Type your own question..."
+                placeholder="e.g. Understand whether the visitor wants a demo"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    const trimmed = customQuestionInput.trim();
-                    if (trimmed && !selectedQuestions.includes(trimmed)) {
-                      setSelectedQuestions((prev) => [...prev, trimmed]);
-                    }
-                    setCustomQuestionInput("");
+                    addCustomObjective(customQuestionInput);
                   }
                 }}
               />
-        <Button
-          type="button"
-          className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
-          onClick={() => {
-            const trimmed = customQuestionInput.trim();
-            if (trimmed && !selectedQuestions.includes(trimmed)) {
-              setSelectedQuestions((prev) => [...prev, trimmed]);
-            }
-            setCustomQuestionInput("");
-          }}
-        >
-          Add
-        </Button>
+              <Button
+                type="button"
+                className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+                onClick={() => addCustomObjective(customQuestionInput)}
+              >
+                Add
+              </Button>
             </div>
           </div>
 
-          {/* Section 4 - Selected Questions Summary + Reorder */}
-          {selectedQuestions.length > 0 && (
+          {/* Section 4 - Objective priority */}
+          {activeObjectives.length > 0 && (
             <div className="space-y-3">
               <div>
-                <Label className="text-base">Question priority</Label>
+                <Label className="text-base">Objective priority</Label>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  The bot will ask these in order. Click the arrows to reorder, click × to remove.
+                  LeadPilot treats these as goals, not a script. Lower items are lower priority.
+                  Click the arrows to reorder, click × to remove.
                 </p>
               </div>
               <div className="space-y-2">
-                {selectedQuestions.map((question, index) => (
+                {activeObjectives.map((obj, index) => (
                   <div
-                    key={question}
+                    key={obj.id}
                     className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5"
                   >
                     <span className="text-xs font-mono text-slate-400 w-5 text-center">{index + 1}</span>
-                    <span className="flex-1 text-sm text-slate-700">{question}</span>
+                    <span className="flex-1 text-sm text-slate-700">{obj.objective}</span>
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
                         disabled={index === 0}
-                        onClick={() => {
-                          const updated = [...selectedQuestions];
-                          [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
-                          setSelectedQuestions(updated);
-                        }}
+                        onClick={() => reorderObjective(index, index - 1)}
                         className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         aria-label="Move up"
                       >
@@ -1091,12 +1323,8 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                       </button>
                       <button
                         type="button"
-                        disabled={index === selectedQuestions.length - 1}
-                        onClick={() => {
-                          const updated = [...selectedQuestions];
-                          [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
-                          setSelectedQuestions(updated);
-                        }}
+                        disabled={index === activeObjectives.length - 1}
+                        onClick={() => reorderObjective(index, index + 1)}
                         className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         aria-label="Move down"
                       >
@@ -1104,9 +1332,9 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                       </button>
                       <button
                         type="button"
-                        onClick={() => setSelectedQuestions((prev) => prev.filter((q) => q !== question))}
+                        onClick={() => removeObjective(obj)}
                         className="p-1 rounded hover:bg-red-100 hover:text-red-600 transition-colors text-slate-400"
-                        aria-label="Remove question"
+                        aria-label="Remove objective"
                       >
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                       </button>
@@ -1130,46 +1358,169 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
       )}
 
       {activeTab === "appearance" && (
-        <form onSubmit={handleSave} className="rounded-xl border border-slate-200 bg-white p-6 space-y-5">
+        <form onSubmit={handleSave} className="space-y-7 rounded-xl border border-slate-200 bg-white p-6">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Appearance</h2>
             <p className="text-sm text-slate-500">Customize how the widget looks on your site.</p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="botName">Bot Name</Label>
-            <Input
-              id="botName"
-              value={botName}
-              onChange={(e) => setBotName(e.target.value)}
-              placeholder="Ava"
-            />
-          </div>
+          <section className="space-y-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Basic</h3>
+            <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="botName">Bot Name</Label>
+                <Input
+                  id="botName"
+                  value={botName}
+                  onChange={(e) => setBotName(e.target.value)}
+                  placeholder="Ava"
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="color">Brand Color</Label>
-            <div className="flex items-center gap-3">
-              <Input
-                id="color"
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="h-10 w-16 cursor-pointer p-1"
-              />
-              <span className="text-sm text-slate-600 font-mono">{color}</span>
+              <div className="space-y-1.5">
+                <Label htmlFor="color">Brand Color</Label>
+                <ColorPicker value={color} onChange={setColor} />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="welcomeMessage">Welcome Message</Label>
+                <textarea
+                  id="welcomeMessage"
+                  value={welcomeMessage}
+                  onChange={(e) => setWelcomeMessage(e.target.value)}
+                  className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#7C3AED] focus:ring-2 focus:ring-[#EDE9FE]"
+                  placeholder="Hi! How can I help you today?"
+                />
+              </div>
             </div>
-          </div>
+          </section>
 
-          <div className="space-y-2">
-            <Label htmlFor="welcomeMessage">Welcome Message</Label>
-            <textarea
-              id="welcomeMessage"
-              value={welcomeMessage}
-              onChange={(e) => setWelcomeMessage(e.target.value)}
-              className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#7C3AED] focus:ring-2 focus:ring-[#EDE9FE]"
-              placeholder="Hi! How can I help you today?"
-            />
-          </div>
+          <section className="space-y-4 border-t border-slate-100 pt-6">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Widget Header</h3>
+            <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="headerTitle">Header Title</Label>
+                <Input
+                  id="headerTitle"
+                  value={headerTitle}
+                  onChange={(e) => setHeaderTitle(e.target.value)}
+                  placeholder={botName || "LeadPilot"}
+                />
+                <p className="text-xs text-slate-500">Shown in the widget header. Falls back to Bot Name.</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="headerSubtitle">Header Subtitle</Label>
+                <Input
+                  id="headerSubtitle"
+                  value={headerSubtitle}
+                  onChange={(e) => setHeaderSubtitle(e.target.value)}
+                  placeholder="Online · Typically replies instantly"
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-4 border-t border-slate-100 pt-6">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Style</h3>
+            <div className="grid grid-cols-1 items-start gap-x-5 gap-y-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="fontFamily">Font Family</Label>
+                <select
+                  id="fontFamily"
+                  value={fontFamily}
+                  onChange={(e) => setFontFamily(e.target.value)}
+                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-[#7C3AED] focus:ring-2 focus:ring-[#EDE9FE]"
+                >
+                  {FONT_OPTIONS.map((opt) => (
+                    <option key={opt.label} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium text-slate-800">Show “Powered by LeadPilot”</Label>
+                  <p className="text-xs text-slate-500">Turn off to white-label.</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={showBranding}
+                  onClick={() => setShowBranding((v) => !v)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                    showBranding ? "bg-[#7C3AED]" : "bg-slate-300"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                      showBranding ? "translate-x-5" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-4 border-t border-slate-100 pt-6">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Widget Avatar / Logo</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Upload an image to show in the widget header instead of the bot initials.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 rounded-lg border border-slate-200 p-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-50">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Widget avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-xs text-slate-400">None</span>
+                )}
+              </div>
+              <div className="flex min-w-[200px] flex-1 flex-col gap-2">
+                <Input
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="https://…/logo.png or paste image URL"
+                  className="text-sm"
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    id="avatar-upload"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setAvatarUrl(reader.result as string);
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    className="inline-flex items-center gap-2 border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                    onClick={() => document.getElementById("avatar-upload")?.click()}
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload image
+                  </Button>
+                  {avatarUrl && (
+                    <Button
+                      type="button"
+                      className="bg-transparent text-red-600 hover:bg-red-50"
+                      onClick={() => setAvatarUrl("")}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
 
           <BrandSection
             brand={brandData}

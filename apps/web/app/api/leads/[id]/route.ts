@@ -4,6 +4,7 @@ import { fail, ok } from "@/lib/api-response";
 import { createClient } from "@/lib/supabase/server";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { getPersistedIntelligence } from "@/lib/crm";
 
 const paramsSchema = z.object({
   id: z.string().min(1),
@@ -74,7 +75,11 @@ export async function GET(
         })
       : null;
 
-    return ok({ ...lead, conversation });
+    return ok({
+      ...lead,
+      conversation,
+      intelligence: await getPersistedIntelligence(lead.conversationId)
+    });
   } catch (error) {
     logger.error(error);
     return fail("Unable to fetch lead", 500);

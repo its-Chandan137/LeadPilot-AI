@@ -16,6 +16,22 @@ const bodySchema = z.object({
     brand: z.any().optional(),
     objective: z.enum(["lead-generation", "customer-support", "general-information"]).optional(),
     questions: z.array(z.string()).optional(),
+    objectives: z
+      .array(
+        z.object({
+          id: z.string(),
+          type: z.string(),
+          objective: z.string(),
+          enabled: z.boolean(),
+          priority: z.number()
+        })
+      )
+      .optional(),
+    showBranding: z.boolean().optional(),
+    fontFamily: z.string().optional(),
+    headerTitle: z.string().optional(),
+    headerSubtitle: z.string().optional(),
+    avatarUrl: z.string().optional(),
   }).optional(),
 });
 
@@ -96,6 +112,12 @@ export async function PUT(
     if (updates.brand !== undefined) newWidgetConfig.brand = updates.brand;
     if (updates.objective !== undefined) newWidgetConfig.objective = updates.objective;
     if (updates.questions !== undefined) newWidgetConfig.questions = updates.questions;
+    if (updates.objectives !== undefined) newWidgetConfig.objectives = updates.objectives;
+    if (updates.showBranding !== undefined) newWidgetConfig.showBranding = updates.showBranding;
+    if (updates.fontFamily !== undefined) newWidgetConfig.fontFamily = updates.fontFamily;
+    if (updates.headerTitle !== undefined) newWidgetConfig.headerTitle = updates.headerTitle;
+    if (updates.headerSubtitle !== undefined) newWidgetConfig.headerSubtitle = updates.headerSubtitle;
+    if (updates.avatarUrl !== undefined) newWidgetConfig.avatarUrl = updates.avatarUrl;
 
     const updated = await prisma.project.update({
       where: { id: project.id },

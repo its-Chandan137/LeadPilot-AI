@@ -15,10 +15,11 @@ export const BLAST_CTAS = [
   { label: "Book a Demo", message: "I'd like to book a demo", icon: BlastCalendarIcon },
 ] as const;
 
-export function getBlastStyles(color: string) {
+export function getBlastStyles(color: string, font = "") {
+  const fontFamily = font && font.trim() ? font : 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
   return `
     :host { all: initial; }
-    .lp-blast, .lp-blast * { box-sizing: border-box; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .lp-blast, .lp-blast * { box-sizing: border-box; font-family: ${fontFamily}; }
 
     .lp-blast {
       position: fixed;
@@ -310,6 +311,13 @@ export function getBlastStyles(color: string) {
       padding: 0;
     }
 
+    .lp-blast-poweredby {
+      text-align: center;
+      padding: 8px 12px 10px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
     @keyframes lp-blast-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes lp-blast-blink { 0%, 80%, 100% { opacity: 0.35; } 40% { opacity: 1; } }
     @keyframes lp-blast-spin { to { transform: rotate(360deg); } }
@@ -333,6 +341,8 @@ type ChatMessage = {
 type BlastWidgetProps = {
   botName: string;
   color: string;
+  fontFamily?: string;
+  showBranding?: boolean;
   status: "collapsed" | "open" | "loading" | "error";
   mode: WidgetMode;
   messages: ChatMessage[];
@@ -362,6 +372,8 @@ type BlastWidgetProps = {
 export function BlastWidget({
   botName,
   color,
+  fontFamily,
+  showBranding,
   status,
   mode,
   messages,
@@ -558,6 +570,9 @@ export function BlastWidget({
                 </div>
               )}
 
+            {showBranding !== false && (
+              <div className="lp-blast-poweredby">Powered by LeadPilot</div>
+            )}
             </div>
           </div>
         </div>

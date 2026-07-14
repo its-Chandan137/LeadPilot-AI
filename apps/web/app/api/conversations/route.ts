@@ -5,6 +5,7 @@ import { corsHeaders, fail, ok } from "@/lib/api-response";
 import { createClient } from "@/lib/supabase/server";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { getPersistedIntelligence } from "@/lib/crm";
 
 const querySchema = z.object({
   projectId: z.string().cuid().optional(),
@@ -140,8 +141,15 @@ export async function GET(request: Request) {
     const total = countResult[0]?.total ?? 0;
     const totalPages = Math.ceil(total / limit);
 
+    const enriched = await Promise.all(
+      conversations.map(async (c) => ({
+        ...c,
+        intelligence: await getPersistedIntelligence(c.id)
+      }))
+    );
+
     return ok({
-      conversations,
+      conversations: enriched,
       pagination: {
         page,
         limit,
