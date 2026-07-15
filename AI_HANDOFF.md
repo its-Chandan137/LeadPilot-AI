@@ -202,4 +202,345 @@ Output: a single `LeadPilotAIOS` object (memory, business, conversation, lead, s
 
 ---
 
+
+Appendix A — Current Development State
+Project Status
+
+LeadPilot AI is currently in an advanced stage of development.
+
+Completed
+✅ Authentication & Workspaces
+✅ Projects
+✅ Website Widget
+✅ Voice Agent (LiveKit)
+✅ Knowledge Base (Text, URL, Documents, Social)
+✅ RAG Retrieval Pipeline
+✅ Conversation Memory
+✅ AI Response Architecture
+✅ AI Operating System (AI OS)
+✅ Goal Engine
+✅ Strategy Engine
+✅ Sales Brain
+✅ Lead Scoring
+✅ Conversation Intelligence
+✅ CRM Intelligence
+✅ Analytics Intelligence
+✅ Timeline Engine
+✅ Durable Intelligence Persistence (Prisma)
+✅ CRM Dashboard
+✅ Analytics Dashboard
+✅ Global Dashboard
+✅ Lead Management
+✅ Conversation Analysis
+✅ Activity Feed
+Current Phase
+
+Latest completed phase: Phase 15.5
+
+The intelligence pipeline is complete.
+
+The application is now moving from feature development into production hardening and scaling.
+
+The major architecture should now be considered stable.
+
+Appendix B — Core Architecture Philosophy
+
+LeadPilot AI follows one fundamental principle:
+
+One LLM call per conversation turn. Everything else is deterministic.
+
+The AI model is responsible only for producing one structured response.
+
+Everything after that response is computed using deterministic business logic.
+
+The AI should never be asked multiple times during the same turn for:
+
+Lead Scoring
+CRM updates
+Sales decisions
+Goal selection
+Strategy selection
+Analytics
+Timeline
+Business profiling
+
+Those are all handled by AI OS.
+
+Data Flow Philosophy
+User
+
+↓
+
+LLM (ONE CALL)
+
+↓
+
+Structured JSON
+
+↓
+
+Memory
+
+↓
+
+Conversation Intelligence
+
+↓
+
+Lead Scoring
+
+↓
+
+Goal Engine
+
+↓
+
+Strategy Engine
+
+↓
+
+Next Best Action
+
+↓
+
+Sales Brain
+
+↓
+
+CRM Intelligence
+
+↓
+
+Analytics Intelligence
+
+↓
+
+Timeline
+
+↓
+
+Persistence
+
+↓
+
+Dashboard / CRM / Analytics
+
+No component should bypass this flow.
+
+Appendix C — Project Design Rules
+
+These rules should be respected whenever new features are added.
+
+Route Handlers
+
+Routes should orchestrate only.
+
+Routes should never contain business logic.
+
+A route may:
+
+Validate input
+Call services
+Call AI OS
+Persist data
+Return a response
+
+A route should not decide:
+
+Sales strategy
+Lead score
+CRM logic
+Analytics
+Objectives
+Visitor stage
+AI Engines
+
+Every engine should remain:
+
+deterministic
+testable
+modular
+independent
+
+An engine should receive data and return data.
+
+It should not perform database writes.
+
+Persistence
+
+Persistence should remain a separate layer.
+
+AI engines should never directly write to Prisma.
+
+All persistence should happen through:
+
+persistConversation()
+
+or dedicated persistence services.
+
+UI
+
+The frontend should display data.
+
+It should not calculate business intelligence.
+
+Analytics should be computed in backend services.
+
+CRM should read persisted intelligence.
+
+Appendix D — What Must Never Be Rewritten
+
+The following systems are considered core architecture.
+
+Avoid replacing or redesigning them unless absolutely necessary.
+
+runAIOS()
+AI Response schema
+Goal Engine
+Strategy Engine
+Sales Brain
+Lead Scoring
+Conversation Intelligence
+CRM Intelligence
+Analytics Intelligence
+Timeline Engine
+Intelligence Persistence
+AI OS pipeline
+
+These systems form the foundation of LeadPilot AI.
+
+Extend them instead of replacing them.
+
+Appendix E — Safe Areas to Extend
+
+The following areas are designed to grow over time.
+
+Safe additions include:
+
+New CRM pages
+Analytics widgets
+Dashboard cards
+Widget UI
+Voice features
+Knowledge source types
+Integrations
+Billing
+Team collaboration
+Notifications
+Automation workflows
+Reports
+AI recommendations
+Marketplace integrations
+
+These can evolve without changing the AI architecture.
+
+Appendix F — Coding Principles
+
+When contributing to LeadPilot AI, follow these principles.
+
+Prefer Pure Functions
+
+Whenever possible:
+
+Input → Output
+
+Avoid hidden state.
+
+Keep Modules Small
+
+Business logic belongs inside lib/.
+
+UI belongs inside components/.
+
+Routes coordinate everything.
+
+Single Responsibility
+
+Each module should solve one problem.
+
+Examples:
+
+Goal Engine → goals only
+Strategy Engine → strategies only
+Sales Brain → sales mission only
+Analytics → metrics only
+Reuse Existing Intelligence
+
+Before creating new logic:
+
+Check whether the required information already exists inside AI OS.
+
+Avoid duplicate calculations.
+
+Extend, Don't Duplicate
+
+When adding new intelligence:
+
+Extend AI OS output.
+Persist it.
+Expose it through CRM/Analytics.
+
+Do not create parallel systems.
+
+Appendix G — Data Integrity Rules
+
+LeadPilot AI values correctness over appearance.
+
+Never fabricate data.
+
+If data does not exist:
+
+Return null
+Return an empty array
+Return 0 only when mathematically correct
+
+Do not estimate values.
+
+Examples:
+
+Average response length
+Conversation duration
+Analytics
+CRM statistics
+Engagement
+Lead scores
+
+must always be derived from persisted data.
+
+Appendix H — Long-Term Vision
+
+LeadPilot AI aims to become an autonomous AI sales platform.
+
+Future capabilities include:
+
+Autonomous sales agents
+Multi-agent collaboration
+CRM integrations
+Calendar scheduling
+Email follow-ups
+WhatsApp integration
+Slack integration
+Workflow automation
+Team collaboration
+AI-powered recommendations
+Enterprise analytics
+Billing and subscriptions
+Marketplace ecosystem
+
+The AI Operating System should remain the single source of intelligence as the platform grows.
+
+Final Principle
+
+LeadPilot AI is not just a chatbot. It is an AI Operating System for Sales.
+
+Every new feature should either:
+
+improve the intelligence,
+improve how intelligence is stored,
+improve how intelligence is visualized,
+or improve how businesses act on that intelligence.
+
+The architecture should remain modular, deterministic, explainable, and scalable as the product evolves.
+
+
 *End of AI_HANDOFF.md. Paste this into any AI chat for instant project context; link or attach `PROJECT_DETAILS.md` for deep dives.*
