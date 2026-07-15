@@ -32,6 +32,12 @@ const bodySchema = z.object({
     headerTitle: z.string().optional(),
     headerSubtitle: z.string().optional(),
     avatarUrl: z.string().optional(),
+    traffic: z
+      .object({
+        blockedReferrers: z.array(z.string()).optional(),
+        blockedPaths: z.array(z.string()).optional()
+      })
+      .optional()
   }).optional(),
 });
 
@@ -118,6 +124,12 @@ export async function PUT(
     if (updates.headerTitle !== undefined) newWidgetConfig.headerTitle = updates.headerTitle;
     if (updates.headerSubtitle !== undefined) newWidgetConfig.headerSubtitle = updates.headerSubtitle;
     if (updates.avatarUrl !== undefined) newWidgetConfig.avatarUrl = updates.avatarUrl;
+    if (updates.traffic !== undefined) {
+      newWidgetConfig.traffic = {
+        ...(existing.traffic as Record<string, unknown> | undefined),
+        ...(updates.traffic as Record<string, unknown>)
+      };
+    }
 
     const updated = await prisma.project.update({
       where: { id: project.id },

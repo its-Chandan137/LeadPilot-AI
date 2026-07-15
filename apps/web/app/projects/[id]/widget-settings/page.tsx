@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import { getSharedPrismaClient } from "@/lib/prisma";
+import { getTrafficAnalytics } from "@/lib/traffic-analytics";
+import type { TrafficConfig } from "@/lib/traffic-block";
 import { WidgetSettingsClient } from "./widget-settings-client";
 
 export const dynamic = "force-dynamic";
@@ -14,14 +16,26 @@ export default async function WidgetSettingsPage({ params }: { params: { id: str
 
   const apiUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
+  const widgetConfig = (project?.widgetConfig as Record<string, unknown>) ?? {};
+  const trafficConfig = (widgetConfig.traffic ?? {}) as TrafficConfig;
+  const blockedReferrers = Array.isArray(trafficConfig.blockedReferrers)
+    ? (trafficConfig.blockedReferrers as string[])
+    : [];
+
+  const analytics = project
+    ? await getTrafficAnalytics(project.id, blockedReferrers)
+    : null;
+
   return (
     <Suspense fallback={<div className="p-6 text-slate-500">Loading…</div>}>
       <WidgetSettingsClient
         projectId={params.id}
         projectName={project?.name ?? "Project"}
         clientId={project?.clientId ?? ""}
-        widgetConfig={(project?.widgetConfig as Record<string, unknown>) ?? {}}
+        widgetConfig={widgetConfig}
         apiUrl={apiUrl}
+        analytics={analytics}
+        trafficConfig={trafficConfig}
       />
     </Suspense>
   );
