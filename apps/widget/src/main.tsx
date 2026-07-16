@@ -13,6 +13,11 @@ import {
   type WidgetConfigResponse,
   type WidgetMode,
 } from "@leadpilot/types";
+
+// Additive: the config endpoint may signal that this visitor's referrer domain
+// is blocked by the project admin. Older/cached widget builds ignore `blocked`
+// and only read `config`, so this stays a non-breaking extension.
+type WidgetConfigResponseWithBlock = WidgetConfigResponse & { blocked?: boolean };
 import { BlastWidget, getBlastStyles } from "./dock-style";
 import { FusionTemplate } from "./templates/fusion";
 
@@ -286,8 +291,21 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
   }
 
   useEffect(() => {
-    requestJson<WidgetConfigResponse>(`${apiUrl}/api/widget/config?clientId=${encodeURIComponent(clientId)}`)
+    const params = new URLSearchParams();
+    params.set("clientId", clientId);
+    const ref = typeof document !== "undefined" ? document.referrer : "";
+    const pagePath = typeof window !== "undefined" ? window.location.pathname : "";
+    if (ref) params.set("ref", ref);
+    if (pagePath) params.set("path", pagePath);
+    params.set("vid", visitorId);
+
+    requestJson<WidgetConfigResponseWithBlock>(`${apiUrl}/api/widget/config?${params.toString()}`)
       .then((data) => {
+        if (data.blocked) {
+          // Referrer domain is blocked by the project admin — do not mount.
+          setConfigLoading(false);
+          return;
+        }
         setConfig(data.config);
         setConfigLoading(false);
         setMessages(getWelcomeMessages(data.config));
@@ -298,7 +316,7 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
         setErrorType("config");
         setStatus("error");
       });
-  }, [apiUrl, clientId]);
+  }, [apiUrl, clientId, visitorId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -397,7 +415,18 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
       setError(null);
       setErrorType(null);
       try {
-        const data = await requestJson<WidgetConfigResponse>(`${apiUrl}/api/widget/config?clientId=${encodeURIComponent(clientId)}`);
+        const params = new URLSearchParams();
+        params.set("clientId", clientId);
+        const ref = typeof document !== "undefined" ? document.referrer : "";
+        const pagePath = typeof window !== "undefined" ? window.location.pathname : "";
+        if (ref) params.set("ref", ref);
+        if (pagePath) params.set("path", pagePath);
+        params.set("vid", visitorId);
+        const data = await requestJson<WidgetConfigResponseWithBlock>(`${apiUrl}/api/widget/config?${params.toString()}`);
+        if (data.blocked) {
+          setConfigLoading(false);
+          return;
+        }
         setConfig(data.config);
         setConfigLoading(false);
         setMessages(getWelcomeMessages(data.config));
@@ -450,13 +479,40 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
         body: JSON.stringify({ clientId, visitorId }),
       });
       const newRoom = new Room();
-      await newRoom.connect(config.livekitUrl || "", data.token);
-      const audioTrack = await createLocalAudioTrack();
-      await newRoom.localParticipant.publishTrack(audioTrack);
+
+      // Play the agent's audio once a remote track is subscribed. Without this
+      // the visitor never hears the assistant (the local mic is published but
+      // remote audio is never attached to an <audio> element).
+      newRoom.on(RoomEvent.TrackSubscribed, (track) => {
+        if (track.kind === "audio") {
+          const el = track.attach() as HTMLAudioElement;
+          el.style.display = "none";
+          document.body.appendChild(el);
+          el.play().catch((e) => console.error("Voice playback failed:", e));
+        }
+      });
+
+      // The browser may suspend autoplay; re-unlock audio when that happens.
+      newRoom.on(RoomEvent.AudioPlaybackStatusChanged, (allowed: boolean) => {
+        if (!allowed) newRoom.startAudio().catch(() => {});
+      });
+
+      newRoom.on(RoomEvent.ConnectionStateChanged, (state) => {
+        console.log("[Voice] Connection state:", state);
+      });
+
       newRoom.on(RoomEvent.Disconnected, () => {
         setVoiceState("idle");
         setRoom(null);
       });
+
+      await newRoom.connect(config.livekitUrl || "", data.token);
+      // Unlock audio playback inside the user-gesture (button click) context.
+      await newRoom.startAudio().catch(() => {});
+
+      const audioTrack = await createLocalAudioTrack();
+      await newRoom.localParticipant.publishTrack(audioTrack);
+
       setRoom(newRoom);
       setVoiceState("active");
     } catch (err) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   normalizeWidgetMode,
   defaultTemplateFor,
@@ -18,13 +18,24 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CommonDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { Paintbrush, Code, BarChart3, Cpu, Mic, Check, Eye, Target, Upload } from "lucide-react";
+import { Paintbrush, Code, Cpu, Mic, Check, Eye, Target, Globe, Upload } from "lucide-react";
 import { CopySnippet } from "@/components/ui/copy-snippet";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { BrandSection } from "@/components/widget-settings/brand-section";
+import { TrafficTab } from "./traffic-tab";
 import { UnsavedChangesPopup } from "@/components/popups/unsaved-changes";
+import type { AnalyticsData, TrafficConfig } from "./lib/mock-analytics";
 
-type Tab = "objective" | "setup" | "appearance" | "snippet" | "analytics";
+type Tab = "objective" | "setup" | "appearance" | "snippet" | "traffic";
+
+function tabFromParam(tabParam: string | null): Tab {
+  return tabParam === "setup" ||
+    tabParam === "snippet" ||
+    tabParam === "appearance" ||
+    tabParam === "traffic"
+    ? tabParam
+    : "objective";
+}
 type Mode = "chat" | "voice" | "both";
 type Provider = WidgetProvider;
 
@@ -42,6 +53,8 @@ type Props = {
   clientId: string;
   widgetConfig: Record<string, unknown>;
   apiUrl: string;
+  analytics: AnalyticsData | null;
+  trafficConfig: TrafficConfig;
 };
 
 const tabs: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -49,7 +62,7 @@ const tabs: { key: Tab; label: string; icon: React.ComponentType<{ className?: s
   { key: "setup", label: "Widget Setup", icon: Cpu },
   { key: "appearance", label: "Appearance", icon: Paintbrush },
   { key: "snippet", label: "Embed Snippet", icon: Code },
-  { key: "analytics", label: "Analytics", icon: BarChart3 },
+  { key: "traffic", label: "Traffic", icon: Globe },
 ];
 
 const MODES: { value: Mode; label: string }[] = [
@@ -67,34 +80,34 @@ const PROVIDERS: {
   supportedModes: Mode[];
   disabled: boolean;
 }[] = [
-  {
-    value: "groq",
-    name: "Groq",
-    description: "Fast & Free",
-    badge: "Chat Only",
-    badgeColor: "bg-green-100 text-green-700",
-    supportedModes: ["chat"],
-    disabled: false,
-  },
-  {
-    value: "livekit-openai",
-    name: "LiveKit + OpenAI",
-    description: "Chat + Voice",
-    badge: "Chat · Voice · Chat+Voice",
-    badgeColor: "bg-blue-100 text-blue-700",
-    supportedModes: ["chat", "voice", "both"],
-    disabled: false,
-  },
-  {
-    value: "sarvam",
-    name: "Sarvam AI",
-    description: "Indian languages",
-    badge: "Coming Soon",
-    badgeColor: "bg-slate-100 text-slate-600",
-    supportedModes: [],
-    disabled: true,
-  },
-];
+    {
+      value: "groq",
+      name: "Groq",
+      description: "Fast & Free",
+      badge: "Chat Only",
+      badgeColor: "bg-green-100 text-green-700",
+      supportedModes: ["chat"],
+      disabled: false,
+    },
+    {
+      value: "livekit-openai",
+      name: "LiveKit + OpenAI",
+      description: "Chat + Voice",
+      badge: "Chat · Voice · Chat+Voice",
+      badgeColor: "bg-blue-100 text-blue-700",
+      supportedModes: ["chat", "voice", "both"],
+      disabled: false,
+    },
+    {
+      value: "sarvam",
+      name: "Sarvam AI",
+      description: "Indian languages",
+      badge: "Coming Soon",
+      badgeColor: "bg-slate-100 text-slate-600",
+      supportedModes: [],
+      disabled: true,
+    },
+  ];
 
 function defineTemplates(
   type: WidgetTemplateType,
@@ -119,7 +132,7 @@ const TEMPLATES: TemplateDef[] = [
     { style: "modern", name: "Modern" },
     { style: "minimal", name: "Minimal", comingSoon: true },
     { style: "card", name: "Card", comingSoon: true },
-    
+
   ]),
   ...defineTemplates("voiceonly", [
     { style: "classic", name: "Classic" },
@@ -128,7 +141,7 @@ const TEMPLATES: TemplateDef[] = [
     { style: "modern", name: "Modern" },
     { style: "minimal", name: "Minimal", comingSoon: true },
     { style: "card", name: "Card", comingSoon: true },
-    
+
   ]),
   ...defineTemplates("both", [
     { style: "classic", name: "Classic" },
@@ -137,7 +150,7 @@ const TEMPLATES: TemplateDef[] = [
     { style: "modern", name: "Modern" },
     { style: "split", name: "Split", comingSoon: true },
     { style: "tabbed", name: "Tabbed", comingSoon: true },
-   
+
   ]),
 ];
 
@@ -415,6 +428,141 @@ function FullWidgetPreview({
     );
   }
 
+  if (previewStyle === "fusion") {
+    return (
+      <div className="relative h-full w-full overflow-hidden bg-white">
+        <div className="absolute bottom-6 left-1/2 flex h-[min(620px,calc(100%-48px))] w-[min(430px,calc(100%-28px))] -translate-x-1/2 flex-col overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 shadow-2xl backdrop-blur">
+          <div
+            className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/70 px-4 py-4"
+            style={{ background: `linear-gradient(135deg, rgba(255,255,255,0.94), color-mix(in srgb, ${color} 12%, white))` }}
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white shadow-md" style={{ background: color }}>
+                {initial}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-[15px] font-extrabold leading-tight text-slate-900">{botName}</p>
+                <p className="mt-1 flex items-center gap-1.5 text-[12px] text-slate-500">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Online
+                </p>
+              </div>
+            </div>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900/5 text-base leading-none text-slate-600">
+              x
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-slate-50/80 to-white px-4 py-5">
+            {isVoice ? (
+              <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-lg" style={{ background: color }}>
+                  <MicGlyph size={28} />
+                </div>
+                <p className="text-sm font-semibold text-slate-700">Start a voice call</p>
+              </div>
+            ) : (
+              <>
+                <div className="mb-3 max-w-[85%] rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3.5 py-2.5 text-[14px] leading-relaxed text-slate-900 shadow-sm">
+                  {welcomeMessage || "Hi! How can I help you Today?"}
+                </div>
+                <p className="mb-4 text-[10px] text-slate-400">Now</p>
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.slice(0, 3).map((text) => (
+                    <span key={text} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-700">
+                      {text}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-end gap-2 border-t border-slate-200/70 bg-white/90 px-3 py-3">
+            {isVoice || isBoth ? (
+              <div
+                className={cn(
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border text-white",
+                  isVoice && "mx-auto",
+                )}
+                style={{ background: color, borderColor: color }}
+              >
+                <MicGlyph size={18} />
+              </div>
+            ) : null}
+            {!isVoice && (
+              <>
+                <div className="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-[14px] text-slate-400">
+                  Type your message...
+                </div>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-md" style={{ background: color }}>
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <path d="M2.5 10l15-7.5-7.5 15L8.75 11.25 2.5 10z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+                  </svg>
+                </div>
+              </>
+            )}
+          </div>
+          <p className="shrink-0 border-t border-slate-200/60 bg-white/80 py-2 text-center text-[10px] tracking-wide text-slate-400">
+            Powered by LeadPilot
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (previewStyle === "modern") {
+    return (
+      <div className="relative h-full w-full overflow-hidden bg-white">
+        <div className="absolute bottom-6 right-6 flex h-[min(600px,calc(100%-48px))] w-[min(420px,calc(100%-48px))] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+          <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md text-sm font-bold text-white" style={{ background: color }}>
+                {initial}
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-900">{botName}</p>
+                <p className="text-[11px] text-slate-500">Online</p>
+              </div>
+            </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-500">x</div>
+          </div>
+          <div className="min-h-0 flex-1 bg-slate-50 px-4 py-4">
+            {isVoice ? (
+              <div className="flex h-full flex-col items-center justify-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-md text-white shadow-lg" style={{ background: color }}>
+                  <PhoneGlyph size={28} />
+                </div>
+                <p className="text-sm font-semibold text-slate-700">Start a voice call</p>
+              </div>
+            ) : (
+              <div className="rounded-md border border-slate-200 bg-white px-3.5 py-2.5 text-[14px] text-slate-800 shadow-sm">
+                {welcomeMessage || "Hi! How can I help you Today?"}
+              </div>
+            )}
+          </div>
+          {!isVoice && (
+            <div className="flex shrink-0 items-center gap-2 border-t border-slate-200 bg-white p-3">
+              <div className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2.5 text-[14px] text-slate-400">
+                Type your message...
+              </div>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-white" style={{ background: color }}>
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M2.5 10l15-7.5-7.5 15L8.75 11.25 2.5 10z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+                </svg>
+              </div>
+              {isBoth && (
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-white" style={{ background: color }}>
+                  <PhoneGlyph size={16} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (isVoice) {
     return (
       <div className="relative h-full w-full overflow-hidden bg-white">
@@ -514,32 +662,34 @@ function FullWidgetPreview({
   );
 }
 
-const snippetPlatforms: [string, string][] = [
-  [
-    "HTML",
-    `<script\n  async\n  src="${typeof window !== "undefined" ? window.location.origin : ""}/widget.js"\n  data-client-id="##CLIENT_ID##"\n  data-api-url="${typeof window !== "undefined" ? window.location.origin : ""}"\n  data-widget-src="${typeof window !== "undefined" ? window.location.origin : ""}/widget-dist/widget.js"\n></script>`,
-  ],
-  [
-    "React",
-    `useEffect(() => {\n  const s = document.createElement('script')\n  s.src = '${typeof window !== "undefined" ? window.location.origin : ""}/widget.js'\n  s.async = true\n  s.dataset.clientId = '##CLIENT_ID##'\n  s.dataset.apiUrl = '${typeof window !== "undefined" ? window.location.origin : ""}'\n  s.dataset.widgetSrc = '${typeof window !== "undefined" ? window.location.origin : ""}/widget-dist/widget.js'\n  document.body.appendChild(s)\n  return () => document.body.removeChild(s)\n}, [])`,
-  ],
-  [
-    "Angular",
-    `ngOnInit() {\n  const s = document.createElement('script')\n  s.src = '${typeof window !== "undefined" ? window.location.origin : ""}/widget.js'\n  s.async = true\n  s.dataset.clientId = '##CLIENT_ID##'\n  s.dataset.apiUrl = '${typeof window !== "undefined" ? window.location.origin : ""}'\n  s.dataset.widgetSrc = '${typeof window !== "undefined" ? window.location.origin : ""}/widget-dist/widget.js'\n  document.body.appendChild(s)\n}`,
-  ],
-  [
-    "Vue",
-    `onMounted(() => {\n  const s = document.createElement('script')\n  s.src = '${typeof window !== "undefined" ? window.location.origin : ""}/widget.js'\n  s.async = true\n  s.dataset.clientId = '##CLIENT_ID##'\n  s.dataset.apiUrl = '${typeof window !== "undefined" ? window.location.origin : ""}'\n  s.dataset.widgetSrc = '${typeof window !== "undefined" ? window.location.origin : ""}/widget-dist/widget.js'\n  document.body.appendChild(s)\n})`,
-  ],
-  [
-    "Next.js",
-    `<Script\n  async\n  src="${typeof window !== "undefined" ? window.location.origin : ""}/widget.js"\n  data-client-id="##CLIENT_ID##"\n  data-api-url="${typeof window !== "undefined" ? window.location.origin : ""}"\n  data-widget-src="${typeof window !== "undefined" ? window.location.origin : ""}/widget-dist/widget.js"\n/>`,
-  ],
-  [
-    "Google Tag Manager",
-    "Create a Custom HTML tag with the HTML snippet, trigger it on All Pages, then publish the container.",
-  ],
-];
+function buildSnippetPlatforms(origin: string): [string, string][] {
+  return [
+    [
+      "HTML",
+      `<script\n  async\n  src="${origin}/widget.js"\n  data-client-id="##CLIENT_ID##"\n  data-api-url="${origin}"\n  data-widget-src="${origin}/widget-dist/widget.js"\n></script>`,
+    ],
+    [
+      "React",
+      `useEffect(() => {\n  const s = document.createElement('script')\n  s.src = '${origin}/widget.js'\n  s.async = true\n  s.dataset.clientId = '##CLIENT_ID##'\n  s.dataset.apiUrl = '${origin}'\n  s.dataset.widgetSrc = '${origin}/widget-dist/widget.js'\n  document.body.appendChild(s)\n  return () => document.body.removeChild(s)\n}, [])`,
+    ],
+    [
+      "Angular",
+      `ngOnInit() {\n  const s = document.createElement('script')\n  s.src = '${origin}/widget.js'\n  s.async = true\n  s.dataset.clientId = '##CLIENT_ID##'\n  s.dataset.apiUrl = '${origin}'\n  s.dataset.widgetSrc = '${origin}/widget-dist/widget.js'\n  document.body.appendChild(s)\n}`,
+    ],
+    [
+      "Vue",
+      `onMounted(() => {\n  const s = document.createElement('script')\n  s.src = '${origin}/widget.js'\n  s.async = true\n  s.dataset.clientId = '##CLIENT_ID##'\n  s.dataset.apiUrl = '${origin}'\n  s.dataset.widgetSrc = '${origin}/widget-dist/widget.js'\n  document.body.appendChild(s)\n})`,
+    ],
+    [
+      "Next.js",
+      `<Script\n  async\n  src="${origin}/widget.js"\n  data-client-id="##CLIENT_ID##"\n  data-api-url="${origin}"\n  data-widget-src="${origin}/widget-dist/widget.js"\n/>`,
+    ],
+    [
+      "Google Tag Manager",
+      "Create a Custom HTML tag with the HTML snippet, trigger it on All Pages, then publish the container.",
+    ],
+  ];
+}
 
 const FONT_OPTIONS: { label: string; value: string }[] = [
   { label: "Inter (Default)", value: "" },
@@ -550,10 +700,11 @@ const FONT_OPTIONS: { label: string; value: string }[] = [
   { label: "Poppins", value: 'Poppins, "Segoe UI", system-ui, sans-serif' },
 ];
 
-export function WidgetSettingsClient({ projectId, projectName, clientId, widgetConfig, apiUrl }: Props) {
+export function WidgetSettingsClient({ projectId, projectName, clientId, widgetConfig, apiUrl, analytics, trafficConfig }: Props) {
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
-  const initialTab: Tab = tabParam === "setup" || tabParam === "snippet" || tabParam === "appearance" || tabParam === "analytics" ? tabParam : "objective";
+  const router = useRouter();
+  const pathname = usePathname();
+  const initialTab = tabFromParam(searchParams.get("tab"));
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [botName, setBotName] = useState((widgetConfig?.botName as string) ?? "LeadPilot");
   const [color, setColor] = useState((widgetConfig?.color as string) ?? "#2563eb");
@@ -585,6 +736,10 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   const [toast, setToast] = useState<string | null>(null);
   const [pendingTab, setPendingTab] = useState<Tab | null>(null);
   const [showUnsaved, setShowUnsaved] = useState(false);
+  const [origin, setOrigin] = useState("");
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   type Objective = ProjectObjective;
 
@@ -593,13 +748,25 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   );
   const [selectedObjectives, setSelectedObjectives] = useState<BotObjective[]>(
     (widgetConfig?.objectives as BotObjective[] | undefined) ??
-      PREDEFINED_OBJECTIVES["lead-generation"]
+    PREDEFINED_OBJECTIVES["lead-generation"]
   );
   const [customQuestionInput, setCustomQuestionInput] = useState("");
 
   useEffect(() => {
     setSelectedObjectives(PREDEFINED_OBJECTIVES[objective]);
   }, [objective]);
+
+  useEffect(() => {
+    const fromUrl = tabFromParam(searchParams.get("tab"));
+    setActiveTab((current) => (current === fromUrl ? current : fromUrl));
+  }, [searchParams]);
+
+  function applyTab(next: Tab) {
+    setActiveTab(next);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", next);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
 
   const baselineRef = useRef<string>("");
   const savedSnapshotRef = useRef<null | {
@@ -779,7 +946,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
       setPendingTab(next);
       setShowUnsaved(true);
     } else {
-      setActiveTab(next);
+      applyTab(next);
     }
   }
 
@@ -873,7 +1040,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
     };
   }, [widgetConfig]);
 
-  const snippets = snippetPlatforms.map(
+  const snippets = buildSnippetPlatforms(origin).map(
     ([label, snippet]) => [label, snippet.replace(/##CLIENT_ID##/g, clientId)] as [string, string],
   );
 
@@ -954,8 +1121,8 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
               key={tab.key}
               onClick={() => requestTabChange(tab.key)}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.key
-                  ? "border-[#7C3AED] text-[#7C3AED]"
-                  : "border-transparent text-[#6B7280] hover:text-[#111827]"
+                ? "border-[#7C3AED] text-[#7C3AED]"
+                : "border-transparent text-[#6B7280] hover:text-[#111827]"
                 }`}
             >
               <Icon className="w-4 h-4" />
@@ -1149,7 +1316,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             welcomeMessage={welcomeMessage || "Hi! How can I help you Today?"}
           />
         )}
-        </CommonDialog>
+      </CommonDialog>
 
       <UnsavedChangesPopup
         open={showUnsaved}
@@ -1158,14 +1325,14 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
           const ok = await performSave();
           if (ok) {
             setShowUnsaved(false);
-            if (pendingTab) setActiveTab(pendingTab);
+            if (pendingTab) applyTab(pendingTab);
             setPendingTab(null);
           }
         }}
         onDiscard={() => {
           resetForm();
           setShowUnsaved(false);
-          if (pendingTab) setActiveTab(pendingTab);
+          if (pendingTab) applyTab(pendingTab);
           setPendingTab(null);
         }}
         onCancel={() => {
@@ -1319,7 +1486,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                         className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         aria-label="Move up"
                       >
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 9V3M3 6l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 9V3M3 6l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       </button>
                       <button
                         type="button"
@@ -1328,7 +1495,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                         className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         aria-label="Move down"
                       >
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 3v6M9 6L6 9 3 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 3v6M9 6L6 9 3 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       </button>
                       <button
                         type="button"
@@ -1336,7 +1503,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                         className="p-1 rounded hover:bg-red-100 hover:text-red-600 transition-colors text-slate-400"
                         aria-label="Remove objective"
                       >
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
                       </button>
                     </div>
                   </div>
@@ -1450,14 +1617,12 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                   role="switch"
                   aria-checked={showBranding}
                   onClick={() => setShowBranding((v) => !v)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-                    showBranding ? "bg-[#7C3AED]" : "bg-slate-300"
-                  }`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${showBranding ? "bg-[#7C3AED]" : "bg-slate-300"
+                    }`}
                 >
                   <span
-                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                      showBranding ? "translate-x-5" : "translate-x-1"
-                    }`}
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${showBranding ? "translate-x-5" : "translate-x-1"
+                      }`}
                   />
                 </button>
               </div>
@@ -1569,18 +1734,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
         </div>
       )}
 
-      {activeTab === "analytics" && (
-        <div className="flex flex-col items-center justify-center min-h-[40vh] text-center rounded-xl border border-slate-200 bg-white p-12">
-          <div className="w-16 h-16 rounded-2xl bg-[#EDE9FE] flex items-center justify-center mb-4">
-            <BarChart3 className="w-8 h-8 text-[#7C3AED]" />
-          </div>
-          <h2 className="text-2xl font-bold text-[#111827] mb-2">Coming Soon</h2>
-          <p className="text-[#6B7280] max-w-md">
-            Detailed analytics with conversation trends, lead conversion rates, and widget performance
-            metrics are on their way.
-          </p>
-        </div>
-      )}
+      {activeTab === "traffic" && <TrafficTab projectId={projectId} apiUrl={apiUrl} analytics={analytics} trafficConfig={trafficConfig} />}
     </div>
   );
 }

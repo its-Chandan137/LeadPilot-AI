@@ -3,6 +3,7 @@ import { z } from "zod";
 import { corsHeaders, fail, ok } from "@/lib/api-response";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { AccessToken, AgentDispatchClient } from "livekit-server-sdk";
+import { isOriginAllowed } from "@/lib/validate-origin";
 
 const bodySchema = z.object({
   clientId: z.string().min(1),
@@ -26,11 +27,21 @@ export async function POST(request: Request) {
 
     const project = await prisma.project.findUnique({
       where: { clientId },
-      select: { id: true },
+      select: { id: true, siteUrl: true },
     });
 
     if (!project) {
       return fail("Project not found", 404);
+    }
+
+    // Domain lock: only allow the widget to start voice from the project's configured site.
+    const origin = request.headers.get("origin");
+    const referer = request.headers.get("referer");
+    if (!isOriginAllowed(origin, referer, project.siteUrl)) {
+      console.warn(
+        `[Voice] Token rejected: origin="${origin}" referer="${referer}" not allowed for siteUrl="${project.siteUrl}"`
+      );
+      return fail("Voice is not authorized for this domain", 403);
     }
 
     const roomName = `voice-${project.id}-${visitorId}-${Date.now()}`;
@@ -80,9 +91,15 @@ export async function POST(request: Request) {
           voiceConversationId: voiceConversation.id,
         }),
       });
-      console.log(`[Voice] Dispatched agent to room: ${roomName}`);
+      console.log(`[Voice] Dispatched agent "leadpilot-agent" to room: ${roomName}`);
     } catch (dispatchErr) {
-      console.error("[Voice] Agent dispatch failed:", dispatchErr);
+      console.error(
+        `[Voice] CRITICAL: Failed to dispatch agent "leadpilot-agent" to room ${roomName}. ` +
+          `The visitor would connect to an empty room with no assistant. ` +
+          `Verify LIVEKIT_URL/LIVEKIT_API_KEY/LIVEKIT_API_SECRET and that the agent worker is running.`,
+        dispatchErr
+      );
+      return fail("Unable to start voice agent. Please try again later.", 500);
     }
 
     return ok({

@@ -30,6 +30,10 @@ type WidgetConfigJson = {
   template?: string;
   livekitUrl?: string;
   provider?: "groq" | "livekit-openai" | "sarvam";
+  traffic?: {
+    blockedReferrers?: string[];
+    blockedPaths?: string[];
+  };
 };
 
 const demoProject: StoredProject = {
