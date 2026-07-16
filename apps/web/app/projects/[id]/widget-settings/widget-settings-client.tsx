@@ -662,32 +662,34 @@ function FullWidgetPreview({
   );
 }
 
-const snippetPlatforms: [string, string][] = [
-  [
-    "HTML",
-    `<script\n  async\n  src="${typeof window !== "undefined" ? window.location.origin : ""}/widget.js"\n  data-client-id="##CLIENT_ID##"\n  data-api-url="${typeof window !== "undefined" ? window.location.origin : ""}"\n  data-widget-src="${typeof window !== "undefined" ? window.location.origin : ""}/widget-dist/widget.js"\n></script>`,
-  ],
-  [
-    "React",
-    `useEffect(() => {\n  const s = document.createElement('script')\n  s.src = '${typeof window !== "undefined" ? window.location.origin : ""}/widget.js'\n  s.async = true\n  s.dataset.clientId = '##CLIENT_ID##'\n  s.dataset.apiUrl = '${typeof window !== "undefined" ? window.location.origin : ""}'\n  s.dataset.widgetSrc = '${typeof window !== "undefined" ? window.location.origin : ""}/widget-dist/widget.js'\n  document.body.appendChild(s)\n  return () => document.body.removeChild(s)\n}, [])`,
-  ],
-  [
-    "Angular",
-    `ngOnInit() {\n  const s = document.createElement('script')\n  s.src = '${typeof window !== "undefined" ? window.location.origin : ""}/widget.js'\n  s.async = true\n  s.dataset.clientId = '##CLIENT_ID##'\n  s.dataset.apiUrl = '${typeof window !== "undefined" ? window.location.origin : ""}'\n  s.dataset.widgetSrc = '${typeof window !== "undefined" ? window.location.origin : ""}/widget-dist/widget.js'\n  document.body.appendChild(s)\n}`,
-  ],
-  [
-    "Vue",
-    `onMounted(() => {\n  const s = document.createElement('script')\n  s.src = '${typeof window !== "undefined" ? window.location.origin : ""}/widget.js'\n  s.async = true\n  s.dataset.clientId = '##CLIENT_ID##'\n  s.dataset.apiUrl = '${typeof window !== "undefined" ? window.location.origin : ""}'\n  s.dataset.widgetSrc = '${typeof window !== "undefined" ? window.location.origin : ""}/widget-dist/widget.js'\n  document.body.appendChild(s)\n})`,
-  ],
-  [
-    "Next.js",
-    `<Script\n  async\n  src="${typeof window !== "undefined" ? window.location.origin : ""}/widget.js"\n  data-client-id="##CLIENT_ID##"\n  data-api-url="${typeof window !== "undefined" ? window.location.origin : ""}"\n  data-widget-src="${typeof window !== "undefined" ? window.location.origin : ""}/widget-dist/widget.js"\n/>`,
-  ],
-  [
-    "Google Tag Manager",
-    "Create a Custom HTML tag with the HTML snippet, trigger it on All Pages, then publish the container.",
-  ],
-];
+function buildSnippetPlatforms(origin: string): [string, string][] {
+  return [
+    [
+      "HTML",
+      `<script\n  async\n  src="${origin}/widget.js"\n  data-client-id="##CLIENT_ID##"\n  data-api-url="${origin}"\n  data-widget-src="${origin}/widget-dist/widget.js"\n></script>`,
+    ],
+    [
+      "React",
+      `useEffect(() => {\n  const s = document.createElement('script')\n  s.src = '${origin}/widget.js'\n  s.async = true\n  s.dataset.clientId = '##CLIENT_ID##'\n  s.dataset.apiUrl = '${origin}'\n  s.dataset.widgetSrc = '${origin}/widget-dist/widget.js'\n  document.body.appendChild(s)\n  return () => document.body.removeChild(s)\n}, [])`,
+    ],
+    [
+      "Angular",
+      `ngOnInit() {\n  const s = document.createElement('script')\n  s.src = '${origin}/widget.js'\n  s.async = true\n  s.dataset.clientId = '##CLIENT_ID##'\n  s.dataset.apiUrl = '${origin}'\n  s.dataset.widgetSrc = '${origin}/widget-dist/widget.js'\n  document.body.appendChild(s)\n}`,
+    ],
+    [
+      "Vue",
+      `onMounted(() => {\n  const s = document.createElement('script')\n  s.src = '${origin}/widget.js'\n  s.async = true\n  s.dataset.clientId = '##CLIENT_ID##'\n  s.dataset.apiUrl = '${origin}'\n  s.dataset.widgetSrc = '${origin}/widget-dist/widget.js'\n  document.body.appendChild(s)\n})`,
+    ],
+    [
+      "Next.js",
+      `<Script\n  async\n  src="${origin}/widget.js"\n  data-client-id="##CLIENT_ID##"\n  data-api-url="${origin}"\n  data-widget-src="${origin}/widget-dist/widget.js"\n/>`,
+    ],
+    [
+      "Google Tag Manager",
+      "Create a Custom HTML tag with the HTML snippet, trigger it on All Pages, then publish the container.",
+    ],
+  ];
+}
 
 const FONT_OPTIONS: { label: string; value: string }[] = [
   { label: "Inter (Default)", value: "" },
@@ -734,6 +736,10 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   const [toast, setToast] = useState<string | null>(null);
   const [pendingTab, setPendingTab] = useState<Tab | null>(null);
   const [showUnsaved, setShowUnsaved] = useState(false);
+  const [origin, setOrigin] = useState("");
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   type Objective = ProjectObjective;
 
@@ -1034,7 +1040,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
     };
   }, [widgetConfig]);
 
-  const snippets = snippetPlatforms.map(
+  const snippets = buildSnippetPlatforms(origin).map(
     ([label, snippet]) => [label, snippet.replace(/##CLIENT_ID##/g, clientId)] as [string, string],
   );
 
