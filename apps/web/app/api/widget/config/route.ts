@@ -3,12 +3,22 @@ import { z } from "zod";
 import { corsHeaders, fail, ok } from "@/lib/api-response";
 import { findProjectByClientId, toWidgetConfig } from "@/lib/widget-store";
 import { isOriginAllowed } from "@/lib/validate-origin";
+import { normalizeReferrerDomain } from "@/lib/referrer";
+import { isTrafficBlocked, type TrafficConfig } from "@/lib/traffic-block";
+import { getSharedPrismaClient } from "@/lib/prisma";
+import { waitUntil } from "@vercel/functions";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
+const REFERER_MAX = 500;
+const PATH_MAX = 300;
+
 const querySchema = z.object({
-  clientId: z.string().min(1)
+  clientId: z.string().min(1),
+  ref: z.string().optional(),
+  path: z.string().optional(),
+  vid: z.string().optional(),
 });
 
 const demoConfig = {
@@ -30,14 +40,19 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const parsed = querySchema.safeParse({
-      clientId: url.searchParams.get("clientId")
+      clientId: url.searchParams.get("clientId"),
+      ref: url.searchParams.get("ref") ?? undefined,
+      path: url.searchParams.get("path") ?? undefined,
+      vid: url.searchParams.get("vid") ?? undefined
     });
 
     if (!parsed.success) {
       return fail("Missing clientId");
     }
 
-    const project = await findProjectByClientId(parsed.data.clientId);
+    const { clientId, ref, path, vid } = parsed.data;
+
+    const project = await findProjectByClientId(clientId);
 
     if (!project) {
       const livekitUrl = process.env.LIVEKIT_URL;
@@ -47,9 +62,10 @@ export async function GET(request: Request) {
       return ok({
         config: {
           ...demoConfig,
-          clientId: parsed.data.clientId,
+          clientId,
           livekitUrl
-        }
+        },
+        blocked: false
       });
     }
 
@@ -66,7 +82,36 @@ export async function GET(request: Request) {
       return fail("Server misconfigured: LIVEKIT_URL is missing", 500);
     }
 
-    return ok({ config });
+    const referrerDomain = normalizeReferrerDomain(ref, project.siteUrl);
+
+    const widgetConfig = (project.widgetConfig ?? {}) as Record<string, unknown>;
+    const traffic = (widgetConfig.traffic ?? {}) as TrafficConfig;
+
+    // Log the impression without blocking the response (KB-crawl pattern).
+    // Captured even when the domain/path is blocked so the admin still sees
+    // that traffic in the analytics tab.
+    waitUntil(
+      (async () => {
+        try {
+          const prisma = getSharedPrismaClient();
+          await prisma.widgetTraffic.create({
+            data: {
+              projectId: project.id,
+              visitorId: vid ?? null,
+              referrer: ref ? ref.slice(0, REFERER_MAX) : null,
+              referrerDomain,
+              path: path ? path.slice(0, PATH_MAX) : null
+            }
+          });
+        } catch (error) {
+          logger.error(error);
+        }
+      })()
+    );
+
+    const isBlocked = isTrafficBlocked({ referrerDomain, path, traffic });
+
+    return ok({ config, blocked: isBlocked });
   } catch (error) {
     logger.error(error);
     return fail("Unable to load widget config", 500);

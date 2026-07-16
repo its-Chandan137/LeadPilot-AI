@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   normalizeWidgetMode,
   defaultTemplateFor,
@@ -18,13 +18,24 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CommonDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { Paintbrush, Code, BarChart3, Cpu, Mic, Check, Eye, Target, Upload } from "lucide-react";
+import { Paintbrush, Code, Cpu, Mic, Check, Eye, Target, Globe, Upload } from "lucide-react";
 import { CopySnippet } from "@/components/ui/copy-snippet";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { BrandSection } from "@/components/widget-settings/brand-section";
+import { TrafficTab } from "./traffic-tab";
 import { UnsavedChangesPopup } from "@/components/popups/unsaved-changes";
+import type { AnalyticsData, TrafficConfig } from "./lib/mock-analytics";
 
-type Tab = "objective" | "setup" | "appearance" | "snippet" | "analytics";
+type Tab = "objective" | "setup" | "appearance" | "snippet" | "traffic";
+
+function tabFromParam(tabParam: string | null): Tab {
+  return tabParam === "setup" ||
+    tabParam === "snippet" ||
+    tabParam === "appearance" ||
+    tabParam === "traffic"
+    ? tabParam
+    : "objective";
+}
 type Mode = "chat" | "voice" | "both";
 type Provider = WidgetProvider;
 
@@ -42,6 +53,8 @@ type Props = {
   clientId: string;
   widgetConfig: Record<string, unknown>;
   apiUrl: string;
+  analytics: AnalyticsData | null;
+  trafficConfig: TrafficConfig;
 };
 
 const tabs: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -49,7 +62,7 @@ const tabs: { key: Tab; label: string; icon: React.ComponentType<{ className?: s
   { key: "setup", label: "Widget Setup", icon: Cpu },
   { key: "appearance", label: "Appearance", icon: Paintbrush },
   { key: "snippet", label: "Embed Snippet", icon: Code },
-  { key: "analytics", label: "Analytics", icon: BarChart3 },
+  { key: "traffic", label: "Traffic", icon: Globe },
 ];
 
 const MODES: { value: Mode; label: string }[] = [
@@ -67,34 +80,34 @@ const PROVIDERS: {
   supportedModes: Mode[];
   disabled: boolean;
 }[] = [
-  {
-    value: "groq",
-    name: "Groq",
-    description: "Fast & Free",
-    badge: "Chat Only",
-    badgeColor: "bg-green-100 text-green-700",
-    supportedModes: ["chat"],
-    disabled: false,
-  },
-  {
-    value: "livekit-openai",
-    name: "LiveKit + OpenAI",
-    description: "Chat + Voice",
-    badge: "Chat · Voice · Chat+Voice",
-    badgeColor: "bg-blue-100 text-blue-700",
-    supportedModes: ["chat", "voice", "both"],
-    disabled: false,
-  },
-  {
-    value: "sarvam",
-    name: "Sarvam AI",
-    description: "Indian languages",
-    badge: "Coming Soon",
-    badgeColor: "bg-slate-100 text-slate-600",
-    supportedModes: [],
-    disabled: true,
-  },
-];
+    {
+      value: "groq",
+      name: "Groq",
+      description: "Fast & Free",
+      badge: "Chat Only",
+      badgeColor: "bg-green-100 text-green-700",
+      supportedModes: ["chat"],
+      disabled: false,
+    },
+    {
+      value: "livekit-openai",
+      name: "LiveKit + OpenAI",
+      description: "Chat + Voice",
+      badge: "Chat · Voice · Chat+Voice",
+      badgeColor: "bg-blue-100 text-blue-700",
+      supportedModes: ["chat", "voice", "both"],
+      disabled: false,
+    },
+    {
+      value: "sarvam",
+      name: "Sarvam AI",
+      description: "Indian languages",
+      badge: "Coming Soon",
+      badgeColor: "bg-slate-100 text-slate-600",
+      supportedModes: [],
+      disabled: true,
+    },
+  ];
 
 function defineTemplates(
   type: WidgetTemplateType,
@@ -119,7 +132,7 @@ const TEMPLATES: TemplateDef[] = [
     { style: "modern", name: "Modern" },
     { style: "minimal", name: "Minimal", comingSoon: true },
     { style: "card", name: "Card", comingSoon: true },
-    
+
   ]),
   ...defineTemplates("voiceonly", [
     { style: "classic", name: "Classic" },
@@ -128,7 +141,7 @@ const TEMPLATES: TemplateDef[] = [
     { style: "modern", name: "Modern" },
     { style: "minimal", name: "Minimal", comingSoon: true },
     { style: "card", name: "Card", comingSoon: true },
-    
+
   ]),
   ...defineTemplates("both", [
     { style: "classic", name: "Classic" },
@@ -137,7 +150,7 @@ const TEMPLATES: TemplateDef[] = [
     { style: "modern", name: "Modern" },
     { style: "split", name: "Split", comingSoon: true },
     { style: "tabbed", name: "Tabbed", comingSoon: true },
-   
+
   ]),
 ];
 
@@ -685,10 +698,11 @@ const FONT_OPTIONS: { label: string; value: string }[] = [
   { label: "Poppins", value: 'Poppins, "Segoe UI", system-ui, sans-serif' },
 ];
 
-export function WidgetSettingsClient({ projectId, projectName, clientId, widgetConfig, apiUrl }: Props) {
+export function WidgetSettingsClient({ projectId, projectName, clientId, widgetConfig, apiUrl, analytics, trafficConfig }: Props) {
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
-  const initialTab: Tab = tabParam === "setup" || tabParam === "snippet" || tabParam === "appearance" || tabParam === "analytics" ? tabParam : "objective";
+  const router = useRouter();
+  const pathname = usePathname();
+  const initialTab = tabFromParam(searchParams.get("tab"));
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [botName, setBotName] = useState((widgetConfig?.botName as string) ?? "LeadPilot");
   const [color, setColor] = useState((widgetConfig?.color as string) ?? "#2563eb");
@@ -728,13 +742,25 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   );
   const [selectedObjectives, setSelectedObjectives] = useState<BotObjective[]>(
     (widgetConfig?.objectives as BotObjective[] | undefined) ??
-      PREDEFINED_OBJECTIVES["lead-generation"]
+    PREDEFINED_OBJECTIVES["lead-generation"]
   );
   const [customQuestionInput, setCustomQuestionInput] = useState("");
 
   useEffect(() => {
     setSelectedObjectives(PREDEFINED_OBJECTIVES[objective]);
   }, [objective]);
+
+  useEffect(() => {
+    const fromUrl = tabFromParam(searchParams.get("tab"));
+    setActiveTab((current) => (current === fromUrl ? current : fromUrl));
+  }, [searchParams]);
+
+  function applyTab(next: Tab) {
+    setActiveTab(next);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", next);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
 
   const baselineRef = useRef<string>("");
   const savedSnapshotRef = useRef<null | {
@@ -914,7 +940,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
       setPendingTab(next);
       setShowUnsaved(true);
     } else {
-      setActiveTab(next);
+      applyTab(next);
     }
   }
 
@@ -1089,8 +1115,8 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
               key={tab.key}
               onClick={() => requestTabChange(tab.key)}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.key
-                  ? "border-[#7C3AED] text-[#7C3AED]"
-                  : "border-transparent text-[#6B7280] hover:text-[#111827]"
+                ? "border-[#7C3AED] text-[#7C3AED]"
+                : "border-transparent text-[#6B7280] hover:text-[#111827]"
                 }`}
             >
               <Icon className="w-4 h-4" />
@@ -1284,7 +1310,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
             welcomeMessage={welcomeMessage || "Hi! How can I help you Today?"}
           />
         )}
-        </CommonDialog>
+      </CommonDialog>
 
       <UnsavedChangesPopup
         open={showUnsaved}
@@ -1293,14 +1319,14 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
           const ok = await performSave();
           if (ok) {
             setShowUnsaved(false);
-            if (pendingTab) setActiveTab(pendingTab);
+            if (pendingTab) applyTab(pendingTab);
             setPendingTab(null);
           }
         }}
         onDiscard={() => {
           resetForm();
           setShowUnsaved(false);
-          if (pendingTab) setActiveTab(pendingTab);
+          if (pendingTab) applyTab(pendingTab);
           setPendingTab(null);
         }}
         onCancel={() => {
@@ -1454,7 +1480,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                         className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         aria-label="Move up"
                       >
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 9V3M3 6l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 9V3M3 6l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       </button>
                       <button
                         type="button"
@@ -1463,7 +1489,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                         className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         aria-label="Move down"
                       >
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 3v6M9 6L6 9 3 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 3v6M9 6L6 9 3 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       </button>
                       <button
                         type="button"
@@ -1471,7 +1497,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                         className="p-1 rounded hover:bg-red-100 hover:text-red-600 transition-colors text-slate-400"
                         aria-label="Remove objective"
                       >
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
                       </button>
                     </div>
                   </div>
@@ -1585,14 +1611,12 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
                   role="switch"
                   aria-checked={showBranding}
                   onClick={() => setShowBranding((v) => !v)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-                    showBranding ? "bg-[#7C3AED]" : "bg-slate-300"
-                  }`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${showBranding ? "bg-[#7C3AED]" : "bg-slate-300"
+                    }`}
                 >
                   <span
-                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                      showBranding ? "translate-x-5" : "translate-x-1"
-                    }`}
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${showBranding ? "translate-x-5" : "translate-x-1"
+                      }`}
                   />
                 </button>
               </div>
@@ -1704,18 +1728,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
         </div>
       )}
 
-      {activeTab === "analytics" && (
-        <div className="flex flex-col items-center justify-center min-h-[40vh] text-center rounded-xl border border-slate-200 bg-white p-12">
-          <div className="w-16 h-16 rounded-2xl bg-[#EDE9FE] flex items-center justify-center mb-4">
-            <BarChart3 className="w-8 h-8 text-[#7C3AED]" />
-          </div>
-          <h2 className="text-2xl font-bold text-[#111827] mb-2">Coming Soon</h2>
-          <p className="text-[#6B7280] max-w-md">
-            Detailed analytics with conversation trends, lead conversion rates, and widget performance
-            metrics are on their way.
-          </p>
-        </div>
-      )}
+      {activeTab === "traffic" && <TrafficTab projectId={projectId} apiUrl={apiUrl} analytics={analytics} trafficConfig={trafficConfig} />}
     </div>
   );
 }
