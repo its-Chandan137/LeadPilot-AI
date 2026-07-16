@@ -415,6 +415,141 @@ function FullWidgetPreview({
     );
   }
 
+  if (previewStyle === "fusion") {
+    return (
+      <div className="relative h-full w-full overflow-hidden bg-white">
+        <div className="absolute bottom-6 left-1/2 flex h-[min(620px,calc(100%-48px))] w-[min(430px,calc(100%-28px))] -translate-x-1/2 flex-col overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 shadow-2xl backdrop-blur">
+          <div
+            className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/70 px-4 py-4"
+            style={{ background: `linear-gradient(135deg, rgba(255,255,255,0.94), color-mix(in srgb, ${color} 12%, white))` }}
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white shadow-md" style={{ background: color }}>
+                {initial}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-[15px] font-extrabold leading-tight text-slate-900">{botName}</p>
+                <p className="mt-1 flex items-center gap-1.5 text-[12px] text-slate-500">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Online
+                </p>
+              </div>
+            </div>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900/5 text-base leading-none text-slate-600">
+              x
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-slate-50/80 to-white px-4 py-5">
+            {isVoice ? (
+              <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-lg" style={{ background: color }}>
+                  <MicGlyph size={28} />
+                </div>
+                <p className="text-sm font-semibold text-slate-700">Start a voice call</p>
+              </div>
+            ) : (
+              <>
+                <div className="mb-3 max-w-[85%] rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3.5 py-2.5 text-[14px] leading-relaxed text-slate-900 shadow-sm">
+                  {welcomeMessage || "Hi! How can I help you Today?"}
+                </div>
+                <p className="mb-4 text-[10px] text-slate-400">Now</p>
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.slice(0, 3).map((text) => (
+                    <span key={text} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-700">
+                      {text}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-end gap-2 border-t border-slate-200/70 bg-white/90 px-3 py-3">
+            {isVoice || isBoth ? (
+              <div
+                className={cn(
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border text-white",
+                  isVoice && "mx-auto",
+                )}
+                style={{ background: color, borderColor: color }}
+              >
+                <MicGlyph size={18} />
+              </div>
+            ) : null}
+            {!isVoice && (
+              <>
+                <div className="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-[14px] text-slate-400">
+                  Type your message...
+                </div>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-md" style={{ background: color }}>
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <path d="M2.5 10l15-7.5-7.5 15L8.75 11.25 2.5 10z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+                  </svg>
+                </div>
+              </>
+            )}
+          </div>
+          <p className="shrink-0 border-t border-slate-200/60 bg-white/80 py-2 text-center text-[10px] tracking-wide text-slate-400">
+            Powered by LeadPilot
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (previewStyle === "modern") {
+    return (
+      <div className="relative h-full w-full overflow-hidden bg-white">
+        <div className="absolute bottom-6 right-6 flex h-[min(600px,calc(100%-48px))] w-[min(420px,calc(100%-48px))] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+          <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md text-sm font-bold text-white" style={{ background: color }}>
+                {initial}
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-900">{botName}</p>
+                <p className="text-[11px] text-slate-500">Online</p>
+              </div>
+            </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-500">x</div>
+          </div>
+          <div className="min-h-0 flex-1 bg-slate-50 px-4 py-4">
+            {isVoice ? (
+              <div className="flex h-full flex-col items-center justify-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-md text-white shadow-lg" style={{ background: color }}>
+                  <PhoneGlyph size={28} />
+                </div>
+                <p className="text-sm font-semibold text-slate-700">Start a voice call</p>
+              </div>
+            ) : (
+              <div className="rounded-md border border-slate-200 bg-white px-3.5 py-2.5 text-[14px] text-slate-800 shadow-sm">
+                {welcomeMessage || "Hi! How can I help you Today?"}
+              </div>
+            )}
+          </div>
+          {!isVoice && (
+            <div className="flex shrink-0 items-center gap-2 border-t border-slate-200 bg-white p-3">
+              <div className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2.5 text-[14px] text-slate-400">
+                Type your message...
+              </div>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-white" style={{ background: color }}>
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M2.5 10l15-7.5-7.5 15L8.75 11.25 2.5 10z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+                </svg>
+              </div>
+              {isBoth && (
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-white" style={{ background: color }}>
+                  <PhoneGlyph size={16} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (isVoice) {
     return (
       <div className="relative h-full w-full overflow-hidden bg-white">
