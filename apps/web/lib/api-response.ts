@@ -23,7 +23,8 @@ export function fail(error: string, status = 400) {
 export function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
+    "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, Cookie, X-Requested-With, X-CSRF-Token"
   };
 }

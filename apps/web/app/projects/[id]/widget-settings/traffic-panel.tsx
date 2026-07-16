@@ -166,6 +166,7 @@ export function TrafficPanel({
   const selectedInView = selectableGroups.filter((g) => selected.has(g.domain)).length;
   const allSelected = selectableGroups.length > 0 && selectedInView === selectableGroups.length;
   const someSelected = selectedInView > 0 && !allSelected;
+  const anyBlockedSelected = selectableGroups.some((g) => selected.has(g.domain) && blockedDomains.has(g.domain));
 
   useEffect(() => {
     if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected;
@@ -251,7 +252,7 @@ export function TrafficPanel({
   // Reuses persistTraffic (the exact same path as the single-row toggle).
   async function applyBulk() {
     if (selected.size === 0) return;
-    const willBlock = domainFilter !== "blocked";
+    const willBlock = !anyBlockedSelected;
     const nextBlocked = new Set(blockedDomains);
     for (const d of selected) {
       if (willBlock) nextBlocked.add(d);
@@ -305,11 +306,10 @@ export function TrafficPanel({
           <button
             key={tr.value}
             onClick={() => setTimeRange(tr.value)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-              timeRange === tr.value
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${timeRange === tr.value
                 ? "bg-[#7C3AED] text-white"
                 : "bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-[#7C3AED] hover:text-[#7C3AED]"
-            }`}
+              }`}
           >
             {tr.label}
           </button>
@@ -415,40 +415,39 @@ export function TrafficPanel({
                     aria-label="Select all referring domains"
                     className="w-4 h-4 accent-[#7C3AED] cursor-pointer rounded"
                   />
-                  <span className="text-xs text-[#9CA3AF]">
-                    {selected.size > 0 ? `${selected.size} selected` : ""}
-                  </span>
+                  <span className="text-xs font-medium text-[#6B7280]">Select all</span>
                   <span className="text-xs text-[#9CA3AF] text-right">Count</span>
                 </div>
-                {displayedGroups.map((group) => (
-                  <GroupRow
-                    key={group.domain}
-                    group={group}
-                    blocked={blockedDomains.has(group.domain)}
-                    direct={group.domain === "Direct / none"}
-                    disabled={saving}
-                    selected={selected.has(group.domain)}
-                    onSelectChange={() => toggleSelect(group.domain)}
-                  />
-                ))}
+                {displayedGroups
+                  .filter((group) => group.domain !== "Direct / none")
+                  .map((group) => (
+                    <GroupRow
+                      key={group.domain}
+                      group={group}
+                      blocked={blockedDomains.has(group.domain)}
+                      direct={group.domain === "Direct / none"}
+                      disabled={saving}
+                      selected={selected.has(group.domain)}
+                      onSelectChange={() => toggleSelect(group.domain)}
+                    />
+                  ))}
                 <div className="sticky bottom-0 z-10 bg-white border-t border-[#E5E7EB] shadow-[0_-2px_8px_rgba(17,24,39,0.04)] px-5 py-3 flex items-center justify-end">
                   <button
                     type="button"
                     onClick={() => void applyBulk()}
                     disabled={selected.size === 0 || saving}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${
-                      selected.size === 0
+                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${selected.size === 0
                         ? "bg-red-600 text-white cursor-not-allowed"
-                        : domainFilter === "blocked"
-                        ? "bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-[#7C3AED] hover:text-[#7C3AED]"
-                        : "bg-red-600 text-white hover:bg-red-700"
-                    }`}
+                        : anyBlockedSelected
+                          ? "bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
+                          : "bg-red-600 text-white hover:bg-red-700"
+                      }`}
                   >
                     {selected.size === 0
-                      ? "Block"
-                      : domainFilter === "blocked"
-                      ? `Unblock selected (${selected.size})`
-                      : `Block selected (${selected.size})`}
+                      ? "Block selected"
+                      : anyBlockedSelected
+                        ? `Unblock selected (${selected.size})`
+                        : `Block selected (${selected.size})`}
                   </button>
                 </div>
               </>
@@ -598,9 +597,9 @@ function GroupRow({
             Last seen {relativeTime(group.lastSeen)}
           </p>
         </div>
-        {direct && (
-          <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-400 cursor-not-allowed">
-            Always allowed
+        {blocked && (
+          <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-red-200 bg-red-50 text-red-600">
+            Blocked
           </span>
         )}
       </div>
