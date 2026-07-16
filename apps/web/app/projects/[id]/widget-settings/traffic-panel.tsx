@@ -612,13 +612,16 @@ function GroupRow({
   blocked,
   direct,
   disabled,
+  selectMode,
   selected,
   onSelectChange,
+  onToggle,
 }: {
   group: ReferrerGroup;
   blocked: boolean;
   direct: boolean;
   disabled: boolean;
+  selectMode: boolean;
   selected: boolean;
   onSelectChange: () => void;
   onToggle: () => void;
@@ -633,6 +636,7 @@ function GroupRow({
           <p className="text-sm font-medium text-[#111827] truncate">{group.domain}</p>
           <p className="text-xs text-[#9CA3AF]">
             Last seen {relativeTime(group.lastSeen)}
+            {direct ? "" : ` · ${blocked ? "Blocked" : "Unblocked"}`}
           </p>
         </div>
         <span className={COUNT_CENTER}>{group.count}</span>
@@ -682,15 +686,16 @@ function GroupRow({
         <p className="text-sm font-medium text-[#111827] truncate">{group.domain}</p>
         <p className="text-xs text-[#9CA3AF]">
           Last seen {relativeTime(group.lastSeen)}
+          {direct ? "" : ` · ${blocked ? "Blocked" : "Unblocked"}`}
         </p>
       </div>
       <span className={COUNT_CENTER}>{group.count}</span>
       <div className="w-[7.5rem] shrink-0">
-        {blocked ? (
+        {direct ? (
           <span
-            className={`${ACTION_BADGE} border-red-200 bg-red-50 text-red-600`}
+            className={`${ACTION_BADGE} border-slate-200 text-slate-400 cursor-not-allowed`}
           >
-            Blocked
+            Always allowed
           </span>
         ) : (
           <button
