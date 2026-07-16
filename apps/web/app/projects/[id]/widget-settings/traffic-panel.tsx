@@ -118,7 +118,6 @@ export function TrafficPanel({
   const [search, setSearch] = useState("");
   const [blockedDomains, setBlockedDomains] = useState<Set<string>>(new Set());
   const [domainFilter, setDomainFilter] = useState<DomainFilter>("all");
-  const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pendingBlock, setPendingBlock] = useState<ReferrerGroup | null>(null);
   const [blockedPaths, setBlockedPaths] = useState<string[]>(trafficConfig?.blockedPaths ?? []);
@@ -394,20 +393,6 @@ export function TrafficPanel({
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[#6B7280]" />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectMode) setSelected(new Set());
-                    setSelectMode((v) => !v);
-                  }}
-                  className={`h-9 px-3 text-xs font-medium rounded-lg border transition-colors ${
-                    selectMode
-                      ? "bg-[#7C3AED] text-white border-[#7C3AED]"
-                      : "bg-white border-[#E5E7EB] text-[#6B7280] hover:border-[#7C3AED] hover:text-[#7C3AED]"
-                  }`}
-                >
-                  {selectMode ? "Done" : "Select"}
-                </button>
               </div>
             </div>
           </div>
@@ -421,22 +406,20 @@ export function TrafficPanel({
               </div>
             ) : (
               <>
-                {selectMode && (
-                  <div className={`${ROW_GRID} px-5 py-2 border-b border-[#F3F4F6] bg-white`}>
-                    <input
-                      ref={selectAllRef}
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={toggleSelectAll}
-                      aria-label="Select all referring domains"
-                      className="w-4 h-4 accent-[#7C3AED] cursor-pointer rounded"
-                    />
-                    <span className="text-xs text-[#9CA3AF]">
-                      {selected.size > 0 ? `${selected.size} selected` : ""}
-                    </span>
-                    <span className="text-xs text-[#9CA3AF] text-right">Count</span>
-                  </div>
-                )}
+                <div className={`${ROW_GRID} px-5 py-2 border-b border-[#F3F4F6] bg-white`}>
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all referring domains"
+                    className="w-4 h-4 accent-[#7C3AED] cursor-pointer rounded"
+                  />
+                  <span className="text-xs text-[#9CA3AF]">
+                    {selected.size > 0 ? `${selected.size} selected` : ""}
+                  </span>
+                  <span className="text-xs text-[#9CA3AF] text-right">Count</span>
+                </div>
                 {displayedGroups.map((group) => (
                   <GroupRow
                     key={group.domain}
@@ -444,31 +427,30 @@ export function TrafficPanel({
                     blocked={blockedDomains.has(group.domain)}
                     direct={group.domain === "Direct / none"}
                     disabled={saving}
-                    selectMode={selectMode}
                     selected={selected.has(group.domain)}
                     onSelectChange={() => toggleSelect(group.domain)}
-                    onToggle={() => handleToggle(group)}
                   />
                 ))}
-                {selectMode && selected.size >= 1 && (
-                  <div className="sticky bottom-0 z-10 bg-white border-t border-[#E5E7EB] shadow-[0_-2px_8px_rgba(17,24,39,0.04)] px-5 py-3 flex items-center justify-between gap-3">
-                    <span className="text-xs text-[#6B7280] tabular-nums">{selected.size} selected</span>
-                    <button
-                      type="button"
-                      onClick={() => void applyBulk()}
-                      disabled={selected.size === 0 || saving}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${
-                        domainFilter === "blocked"
-                          ? "bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-[#7C3AED] hover:text-[#7C3AED]"
-                          : "bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
-                      }`}
-                    >
-                      {domainFilter === "blocked"
-                        ? `Unblock selected (${selected.size})`
-                        : `Block selected (${selected.size})`}
-                    </button>
-                  </div>
-                )}
+                <div className="sticky bottom-0 z-10 bg-white border-t border-[#E5E7EB] shadow-[0_-2px_8px_rgba(17,24,39,0.04)] px-5 py-3 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => void applyBulk()}
+                    disabled={selected.size === 0 || saving}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${
+                      selected.size === 0
+                        ? "bg-red-600 text-white cursor-not-allowed"
+                        : domainFilter === "blocked"
+                        ? "bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-[#7C3AED] hover:text-[#7C3AED]"
+                        : "bg-red-600 text-white hover:bg-red-700"
+                    }`}
+                  >
+                    {selected.size === 0
+                      ? "Block"
+                      : domainFilter === "blocked"
+                      ? `Unblock selected (${selected.size})`
+                      : `Block selected (${selected.size})`}
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -586,58 +568,16 @@ function GroupRow({
   blocked,
   direct,
   disabled,
-  selectMode,
   selected,
   onSelectChange,
-  onToggle,
 }: {
   group: ReferrerGroup;
   blocked: boolean;
   direct: boolean;
   disabled: boolean;
-  selectMode: boolean;
   selected: boolean;
   onSelectChange: () => void;
-  onToggle: () => void;
 }) {
-  if (!selectMode) {
-    return (
-      <div className="flex items-center gap-3 px-5 py-3 hover:bg-[#FAFAFA] transition-colors">
-        <div className="w-8 h-8 rounded-full bg-[#F5F3FF] text-[#7C3AED] text-xs font-bold flex items-center justify-center shrink-0">
-          {domainInitial(group.domain)}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-[#111827] truncate">{group.domain}</p>
-          <p className="text-xs text-[#9CA3AF]">
-            Last seen {relativeTime(group.lastSeen)}
-          </p>
-        </div>
-        <span className="text-sm font-semibold text-[#111827] tabular-nums w-8 text-right shrink-0">
-          {group.count}
-        </span>
-        {direct ? (
-          <span className="ml-2 shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-400 cursor-not-allowed">
-            Always allowed
-          </span>
-        ) : (
-          <button
-            onClick={onToggle}
-            disabled={disabled}
-            className={`ml-2 shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors disabled:opacity-50 ${
-              blocked
-                ? "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
-                : "bg-white border-[#E5E7EB] text-[#6B7280] hover:border-red-300 hover:text-red-600"
-            }`}
-            aria-label={blocked ? `Unblock ${group.domain}` : `Block ${group.domain}`}
-          >
-            <ShieldOff className="w-3.5 h-3.5" />
-            {blocked ? "Unblock" : "Block"}
-          </button>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div className={`${ROW_GRID} px-5 py-3 hover:bg-[#FAFAFA] transition-colors`}>
       {direct ? (
