@@ -175,6 +175,7 @@ export function TrafficPanel({
   const selectedInView = selectableGroups.filter((g) => selected.has(g.domain)).length;
   const allSelected = selectableGroups.length > 0 && selectedInView === selectableGroups.length;
   const someSelected = selectedInView > 0 && !allSelected;
+  const anyBlockedSelected = selectableGroups.some((g) => selected.has(g.domain) && blockedDomains.has(g.domain));
 
   useEffect(() => {
     if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected;
@@ -331,11 +332,10 @@ export function TrafficPanel({
           <button
             key={tr.value}
             onClick={() => setTimeRange(tr.value)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-              timeRange === tr.value
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${timeRange === tr.value
                 ? "bg-[#7C3AED] text-white"
                 : "bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-[#7C3AED] hover:text-[#7C3AED]"
-            }`}
+              }`}
           >
             {tr.label}
           </button>
@@ -612,16 +612,13 @@ function GroupRow({
   blocked,
   direct,
   disabled,
-  selectMode,
   selected,
   onSelectChange,
-  onToggle,
 }: {
   group: ReferrerGroup;
   blocked: boolean;
   direct: boolean;
   disabled: boolean;
-  selectMode: boolean;
   selected: boolean;
   onSelectChange: () => void;
   onToggle: () => void;
@@ -689,11 +686,11 @@ function GroupRow({
       </div>
       <span className={COUNT_CENTER}>{group.count}</span>
       <div className="w-[7.5rem] shrink-0">
-        {direct ? (
+        {blocked ? (
           <span
-            className={`${ACTION_BADGE} border-slate-200 text-slate-400 cursor-not-allowed`}
+            className={`${ACTION_BADGE} border-red-200 bg-red-50 text-red-600`}
           >
-            Always allowed
+            Blocked
           </span>
         ) : (
           <button
