@@ -178,6 +178,7 @@ Speak naturally. Avoid bullet points or markdown. English only.`;
     // Create AgentSession with OpenAI Realtime
     const session = new voice.AgentSession({
       llm: new openai.realtime.RealtimeModel({
+        model: 'gpt-realtime',
         voice: 'alloy',
         temperature: 0.8,
         turnDetection: {

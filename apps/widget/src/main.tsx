@@ -450,13 +450,40 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
         body: JSON.stringify({ clientId, visitorId }),
       });
       const newRoom = new Room();
-      await newRoom.connect(config.livekitUrl || "", data.token);
-      const audioTrack = await createLocalAudioTrack();
-      await newRoom.localParticipant.publishTrack(audioTrack);
+
+      // Play the agent's audio once a remote track is subscribed. Without this
+      // the visitor never hears the assistant (the local mic is published but
+      // remote audio is never attached to an <audio> element).
+      newRoom.on(RoomEvent.TrackSubscribed, (track) => {
+        if (track.kind === "audio") {
+          const el = track.attach() as HTMLAudioElement;
+          el.style.display = "none";
+          document.body.appendChild(el);
+          el.play().catch((e) => console.error("Voice playback failed:", e));
+        }
+      });
+
+      // The browser may suspend autoplay; re-unlock audio when that happens.
+      newRoom.on(RoomEvent.AudioPlaybackStatusChanged, (allowed: boolean) => {
+        if (!allowed) newRoom.startAudio().catch(() => {});
+      });
+
+      newRoom.on(RoomEvent.ConnectionStateChanged, (state) => {
+        console.log("[Voice] Connection state:", state);
+      });
+
       newRoom.on(RoomEvent.Disconnected, () => {
         setVoiceState("idle");
         setRoom(null);
       });
+
+      await newRoom.connect(config.livekitUrl || "", data.token);
+      // Unlock audio playback inside the user-gesture (button click) context.
+      await newRoom.startAudio().catch(() => {});
+
+      const audioTrack = await createLocalAudioTrack();
+      await newRoom.localParticipant.publishTrack(audioTrack);
+
       setRoom(newRoom);
       setVoiceState("active");
     } catch (err) {
