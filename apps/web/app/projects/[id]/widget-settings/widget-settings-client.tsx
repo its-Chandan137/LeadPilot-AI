@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   normalizeWidgetMode,
   defaultTemplateFor,
@@ -27,6 +27,15 @@ import { UnsavedChangesPopup } from "@/components/popups/unsaved-changes";
 import type { AnalyticsData, TrafficConfig } from "./lib/mock-analytics";
 
 type Tab = "objective" | "setup" | "appearance" | "snippet" | "traffic";
+
+function tabFromParam(tabParam: string | null): Tab {
+  return tabParam === "setup" ||
+    tabParam === "snippet" ||
+    tabParam === "appearance" ||
+    tabParam === "traffic"
+    ? tabParam
+    : "objective";
+}
 type Mode = "chat" | "voice" | "both";
 type Provider = WidgetProvider;
 
@@ -556,8 +565,9 @@ const FONT_OPTIONS: { label: string; value: string }[] = [
 
 export function WidgetSettingsClient({ projectId, projectName, clientId, widgetConfig, apiUrl, analytics, trafficConfig }: Props) {
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
-  const initialTab: Tab = tabParam === "setup" || tabParam === "snippet" || tabParam === "appearance" || tabParam === "traffic" ? tabParam : "objective";
+  const router = useRouter();
+  const pathname = usePathname();
+  const initialTab = tabFromParam(searchParams.get("tab"));
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [botName, setBotName] = useState((widgetConfig?.botName as string) ?? "LeadPilot");
   const [color, setColor] = useState((widgetConfig?.color as string) ?? "#2563eb");
@@ -604,6 +614,18 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
   useEffect(() => {
     setSelectedObjectives(PREDEFINED_OBJECTIVES[objective]);
   }, [objective]);
+
+  useEffect(() => {
+    const fromUrl = tabFromParam(searchParams.get("tab"));
+    setActiveTab((current) => (current === fromUrl ? current : fromUrl));
+  }, [searchParams]);
+
+  function applyTab(next: Tab) {
+    setActiveTab(next);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", next);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
 
   const baselineRef = useRef<string>("");
   const savedSnapshotRef = useRef<null | {
@@ -783,7 +805,7 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
       setPendingTab(next);
       setShowUnsaved(true);
     } else {
-      setActiveTab(next);
+      applyTab(next);
     }
   }
 
@@ -1162,14 +1184,14 @@ export function WidgetSettingsClient({ projectId, projectName, clientId, widgetC
           const ok = await performSave();
           if (ok) {
             setShowUnsaved(false);
-            if (pendingTab) setActiveTab(pendingTab);
+            if (pendingTab) applyTab(pendingTab);
             setPendingTab(null);
           }
         }}
         onDiscard={() => {
           resetForm();
           setShowUnsaved(false);
-          if (pendingTab) setActiveTab(pendingTab);
+          if (pendingTab) applyTab(pendingTab);
           setPendingTab(null);
         }}
         onCancel={() => {

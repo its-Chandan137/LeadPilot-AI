@@ -21,10 +21,18 @@ import type { AnalyticsData, ReferrerHit, ReferrerGroup, TrafficConfig } from ".
 
 type DomainFilter = "all" | "blocked";
 
-// Shared grid template so the select-all header, domain rows, and counts line
-// up exactly. First col is a fixed checkbox slot (empty for Direct / none),
-// middle is the flexible domain block, last is a fixed right-aligned count.
-const ROW_GRID = "grid grid-cols-[1.25rem_1fr_2.5rem] items-center gap-3";
+const ROW_SHELL =
+  "relative flex items-center gap-3 px-5 py-3 hover:bg-[#FAFAFA] transition-colors";
+const ROW_HEADER_SHELL =
+  "relative flex items-center gap-3 px-5 py-2 border-b border-[#F3F4F6] bg-white";
+const COUNT_CENTER =
+  "pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-sm font-semibold text-[#111827] tabular-nums";
+const COUNT_HEADER =
+  "pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]";
+const ACTION_BTN =
+  "inline-flex items-center justify-center gap-1.5 w-full px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors disabled:opacity-50";
+const ACTION_BADGE =
+  "inline-flex items-center justify-center gap-1.5 w-full px-2.5 py-1.5 text-xs font-medium rounded-lg border whitespace-nowrap";
 
 function relativeTime(iso: string): string {
   const now = Date.now();
@@ -118,6 +126,7 @@ export function TrafficPanel({
   const [search, setSearch] = useState("");
   const [blockedDomains, setBlockedDomains] = useState<Set<string>>(new Set());
   const [domainFilter, setDomainFilter] = useState<DomainFilter>("all");
+  const [selectMode, setSelectMode] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pendingBlock, setPendingBlock] = useState<ReferrerGroup | null>(null);
   const [blockedPaths, setBlockedPaths] = useState<string[]>(trafficConfig?.blockedPaths ?? []);
@@ -247,22 +256,39 @@ export function TrafficPanel({
     });
   }
 
-  // Bulk block/unblock in a SINGLE PUT. When the filter is "Blocked" the
-  // selected set is unblocked; otherwise it is added to blockedReferrers.
-  // Reuses persistTraffic (the exact same path as the single-row toggle).
-  async function applyBulk() {
+  const selectedBlockedCount = useMemo(() => {
+    let n = 0;
+    for (const d of selected) if (blockedDomains.has(d)) n++;
+    return n;
+  }, [selected, blockedDomains]);
+  const selectedUnblockedCount = selected.size - selectedBlockedCount;
+
+  // Bulk block/unblock in a SINGLE PUT. Reuses persistTraffic (the exact same
+  // path as the single-row toggle).
+  async function applyBulk(mode: "block" | "unblock") {
     if (selected.size === 0) return;
-    const willBlock = !anyBlockedSelected;
+    const willBlock = mode === "block";
+    const targetDomains = Array.from(selected).filter((d) =>
+      willBlock ? !blockedDomains.has(d) : blockedDomains.has(d)
+    );
+    if (targetDomains.length === 0) return;
+
     const nextBlocked = new Set(blockedDomains);
-    for (const d of selected) {
+    for (const d of targetDomains) {
       if (willBlock) nextBlocked.add(d);
       else nextBlocked.delete(d);
     }
     const previous = blockedDomains;
+    const remainingSelected = new Set(
+      Array.from(selected).filter((d) => !targetDomains.includes(d))
+    );
     setBlockedDomains(nextBlocked);
-    setSelected(new Set());
+    setSelected(remainingSelected);
     const ok = await persistTraffic(Array.from(nextBlocked), blockedPaths);
-    if (!ok) setBlockedDomains(previous);
+    if (!ok) {
+      setBlockedDomains(previous);
+      setSelected(new Set(selected));
+    }
   }
 
   function isValidPathGlob(value: string): string | null {
@@ -380,19 +406,17 @@ export function TrafficPanel({
                 <h2 className="text-sm font-semibold text-[#111827]">By Referring Domain</h2>
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Top sources sorted by traffic volume</p>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <select
-                    aria-label="Filter referring domains"
-                    value={domainFilter}
-                    onChange={(e) => setDomainFilter(e.target.value as DomainFilter)}
-                    className="h-9 pl-3 pr-8 text-sm rounded-lg border border-[#E5E7EB] bg-white text-[#111827] cursor-pointer appearance-none focus:outline-none focus:border-[#7C3AED]"
-                  >
-                    <option value="all">All</option>
-                    <option value="blocked">Blocked</option>
-                  </select>
-                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[#6B7280]" />
-                </div>
+              <div className="relative">
+                <select
+                  aria-label="Filter referring domains"
+                  value={domainFilter}
+                  onChange={(e) => setDomainFilter(e.target.value as DomainFilter)}
+                  className="h-9 pl-3 pr-8 text-sm rounded-lg border border-[#E5E7EB] bg-white text-[#111827] cursor-pointer appearance-none focus:outline-none focus:border-[#7C3AED]"
+                >
+                  <option value="all">All</option>
+                  <option value="blocked">Blocked</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[#6B7280]" />
               </div>
             </div>
           </div>
@@ -406,50 +430,71 @@ export function TrafficPanel({
               </div>
             ) : (
               <>
-                <div className={`${ROW_GRID} px-5 py-2 border-b border-[#F3F4F6] bg-white`}>
-                  <input
-                    ref={selectAllRef}
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={toggleSelectAll}
-                    aria-label="Select all referring domains"
-                    className="w-4 h-4 accent-[#7C3AED] cursor-pointer rounded"
+                {selectMode && (
+                  <div className={ROW_HEADER_SHELL}>
+                    <div className="w-4 shrink-0">
+                      <input
+                        ref={selectAllRef}
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={toggleSelectAll}
+                        aria-label="Select all referring domains"
+                        className="w-4 h-4 accent-[#7C3AED] cursor-pointer rounded"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs text-[#9CA3AF]">
+                        {selected.size > 0 ? `${selected.size} selected` : ""}
+                      </span>
+                    </div>
+                    <span className={COUNT_HEADER}>Count</span>
+                    <div className="w-[7.5rem] shrink-0 text-xs text-[#9CA3AF] text-right">Action</div>
+                  </div>
+                )}
+                {displayedGroups.map((group) => (
+                  <GroupRow
+                    key={group.domain}
+                    group={group}
+                    blocked={blockedDomains.has(group.domain)}
+                    direct={group.domain === "Direct / none"}
+                    disabled={saving}
+                    selectMode={selectMode}
+                    selected={selected.has(group.domain)}
+                    onSelectChange={() => toggleSelect(group.domain)}
+                    onToggle={() => handleToggle(group)}
                   />
-                  <span className="text-xs font-medium text-[#6B7280]">Select all</span>
-                  <span className="text-xs text-[#9CA3AF] text-right">Count</span>
-                </div>
-                {displayedGroups
-                  .filter((group) => group.domain !== "Direct / none")
-                  .map((group) => (
-                    <GroupRow
-                      key={group.domain}
-                      group={group}
-                      blocked={blockedDomains.has(group.domain)}
-                      direct={group.domain === "Direct / none"}
-                      disabled={saving}
-                      selected={selected.has(group.domain)}
-                      onSelectChange={() => toggleSelect(group.domain)}
-                    />
-                  ))}
-                <div className="sticky bottom-0 z-10 bg-white border-t border-[#E5E7EB] shadow-[0_-2px_8px_rgba(17,24,39,0.04)] px-5 py-3 flex items-center justify-end">
-                  <button
-                    type="button"
-                    onClick={() => void applyBulk()}
-                    disabled={selected.size === 0 || saving}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${selected.size === 0
-                        ? "bg-red-600 text-white cursor-not-allowed"
-                        : anyBlockedSelected
-                          ? "bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
-                          : "bg-red-600 text-white hover:bg-red-700"
-                      }`}
-                  >
-                    {selected.size === 0
-                      ? "Block selected"
-                      : anyBlockedSelected
-                        ? `Unblock selected (${selected.size})`
-                        : `Block selected (${selected.size})`}
-                  </button>
-                </div>
+                ))}
+                {selectMode && selected.size >= 1 && (
+                  <div className="sticky bottom-0 z-10 bg-white border-t border-[#E5E7EB] shadow-[0_-2px_8px_rgba(17,24,39,0.04)] px-5 py-3 flex items-center justify-between gap-3">
+                    <span className="text-xs text-[#6B7280] tabular-nums">{selected.size} selected</span>
+                    <div className="flex items-center gap-2">
+                      {selectedUnblockedCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => void applyBulk("block")}
+                          disabled={selected.size === 0 || saving}
+                          className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
+                        >
+                          {selectedBlockedCount === 0
+                            ? `Block selected (${selected.size})`
+                            : `Block unblocked (${selectedUnblockedCount})`}
+                        </button>
+                      )}
+                      {selectedBlockedCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => void applyBulk("unblock")}
+                          disabled={selected.size === 0 || saving}
+                          className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-[#7C3AED] hover:text-[#7C3AED]"
+                        >
+                          {selectedUnblockedCount === 0
+                            ? `Unblock selected (${selected.size})`
+                            : `Unblock blocked (${selectedBlockedCount})`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -576,36 +621,93 @@ function GroupRow({
   disabled: boolean;
   selected: boolean;
   onSelectChange: () => void;
+  onToggle: () => void;
 }) {
-  return (
-    <div className={`${ROW_GRID} px-5 py-3 hover:bg-[#FAFAFA] transition-colors`}>
-      {direct ? (
-        <span aria-hidden="true" />
-      ) : (
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={onSelectChange}
-          aria-label={`Select ${group.domain}`}
-          className="w-4 h-4 accent-[#7C3AED] cursor-pointer rounded"
-        />
-      )}
-      <div className="min-w-0 flex items-center justify-between gap-2">
-        <div className="min-w-0">
+  if (!selectMode) {
+    return (
+      <div className={ROW_SHELL}>
+        <div className="w-8 h-8 rounded-full bg-[#F5F3FF] text-[#7C3AED] text-xs font-bold flex items-center justify-center shrink-0">
+          {domainInitial(group.domain)}
+        </div>
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-[#111827] truncate">{group.domain}</p>
           <p className="text-xs text-[#9CA3AF]">
             Last seen {relativeTime(group.lastSeen)}
           </p>
         </div>
-        {blocked && (
-          <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-red-200 bg-red-50 text-red-600">
-            Blocked
-          </span>
+        <span className={COUNT_CENTER}>{group.count}</span>
+        <div className="w-[7.5rem] shrink-0">
+          {direct ? (
+            <span
+              className={`${ACTION_BADGE} border-slate-200 text-slate-400 cursor-not-allowed`}
+            >
+              Always allowed
+            </span>
+          ) : (
+            <button
+              onClick={onToggle}
+              disabled={disabled}
+              className={`${ACTION_BTN} ${
+                blocked
+                  ? "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                  : "bg-white border-[#E5E7EB] text-[#6B7280] hover:border-red-300 hover:text-red-600"
+              }`}
+              aria-label={blocked ? `Unblock ${group.domain}` : `Block ${group.domain}`}
+            >
+              <ShieldOff className="w-3.5 h-3.5 shrink-0" />
+              {blocked ? "Unblock" : "Block"}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={ROW_SHELL}>
+      <div className="w-4 shrink-0">
+        {direct ? (
+          <span aria-hidden="true" className="block w-4" />
+        ) : (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onSelectChange}
+            aria-label={`Select ${group.domain}`}
+            className="w-4 h-4 accent-[#7C3AED] cursor-pointer rounded"
+          />
         )}
       </div>
-      <span className="text-sm font-semibold text-[#111827] tabular-nums text-right">
-        {group.count}
-      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-[#111827] truncate">{group.domain}</p>
+        <p className="text-xs text-[#9CA3AF]">
+          Last seen {relativeTime(group.lastSeen)}
+        </p>
+      </div>
+      <span className={COUNT_CENTER}>{group.count}</span>
+      <div className="w-[7.5rem] shrink-0">
+        {blocked ? (
+          <span
+            className={`${ACTION_BADGE} border-red-200 bg-red-50 text-red-600`}
+          >
+            Blocked
+          </span>
+        ) : (
+          <button
+            onClick={onToggle}
+            disabled={disabled}
+            className={`${ACTION_BTN} ${
+              blocked
+                ? "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                : "bg-white border-[#E5E7EB] text-[#6B7280] hover:border-red-300 hover:text-red-600"
+            }`}
+            aria-label={blocked ? `Unblock ${group.domain}` : `Block ${group.domain}`}
+          >
+            <ShieldOff className="w-3.5 h-3.5 shrink-0" />
+            {blocked ? "Unblock" : "Block"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
