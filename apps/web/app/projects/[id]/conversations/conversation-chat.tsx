@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ConversationAnalysis } from "@/components/crm/ConversationAnalysis";
 import type { PersistedIntelligence } from "@/lib/crm";
+import { extractLeadInfo, hasLeadData } from "@/lib/lead-extractor";
 
 type Message = {
   id: string;
@@ -32,7 +34,11 @@ type Props = {
 };
 
 export function ConversationChat({ detail, loading }: Props) {
+  const router = useRouter();
   const [view, setView] = useState<"chat" | "analysis">("chat");
+  const [converting, setConverting] = useState(false);
+  const [convertError, setConvertError] = useState<string | null>(null);
+  const leadPanelRef = useRef<HTMLDivElement | null>(null);
   if (loading) {
     return (
       <div className="flex-1 p-6 space-y-6">
@@ -56,6 +62,45 @@ export function ConversationChat({ detail, loading }: Props) {
   const { conversation, project, lead, messages, intelligence } = detail;
   const leadName = lead?.name ?? `Visitor ${conversation.visitorId.slice(-6).toUpperCase()}`;
 
+  const hasLead = lead !== null && lead !== undefined;
+  const captured = messages
+    .filter((m) => m.role === "USER")
+    .map((m) => extractLeadInfo(m.content))
+    .reduce<{ name?: string; email?: string; phone?: string }>(
+      (acc, info) => ({
+        ...acc,
+        ...(info.name && { name: info.name }),
+        ...(info.email && { email: info.email }),
+        ...(info.phone && { phone: info.phone }),
+      }),
+      {}
+    );
+  const canConvert = hasLeadData(captured);
+
+  async function handleConvertOrView() {
+    if (hasLead) {
+      leadPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    if (!canConvert) return;
+    setConverting(true);
+    setConvertError(null);
+    try {
+      const res = await fetch(`/api/conversations/${conversation.id}/convert`, {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? "Conversion failed");
+      }
+      router.refresh();
+    } catch (err) {
+      setConvertError(err instanceof Error ? err.message : "Conversion failed");
+    } finally {
+      setConverting(false);
+    }
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="p-4 bg-white border-b flex items-center justify-between">
@@ -63,21 +108,47 @@ export function ConversationChat({ detail, loading }: Props) {
           <p className="text-sm font-medium text-[#111827]">{leadName}</p>
           <p className="text-xs text-[#7C3AED]">{project.name}</p>
         </div>
-        <div className="inline-flex rounded-md border border-slate-200 p-0.5">
-          <button
-            onClick={() => setView("chat")}
-            className={`px-3 py-1 text-xs rounded ${view === "chat" ? "bg-[#7C3AED] text-white" : "text-slate-600"}`}
-          >
-            Chat
-          </button>
-          <button
-            onClick={() => setView("analysis")}
-            className={`px-3 py-1 text-xs rounded ${view === "analysis" ? "bg-[#7C3AED] text-white" : "text-slate-600"}`}
-          >
-            AI Analysis
-          </button>
+        <div className="flex items-center gap-2">
+          {!hasLead && (
+            <button
+              onClick={handleConvertOrView}
+              disabled={converting || !canConvert}
+              title={!canConvert ? "No contact details captured yet" : undefined}
+              className="px-3 py-1 text-xs rounded bg-[#7C3AED] text-white hover:bg-[#6D28D9] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {converting ? "Converting..." : "Convert as Lead"}
+            </button>
+          )}
+          {hasLead && (
+            <button
+              onClick={handleConvertOrView}
+              className="px-3 py-1 text-xs rounded bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
+            >
+              View lead
+            </button>
+          )}
+          <div className="inline-flex rounded-md border border-slate-200 p-0.5">
+            <button
+              onClick={() => setView("chat")}
+              className={`px-3 py-1 text-xs rounded ${view === "chat" ? "bg-[#7C3AED] text-white" : "text-slate-600"}`}
+            >
+              Chat
+            </button>
+            <button
+              onClick={() => setView("analysis")}
+              className={`px-3 py-1 text-xs rounded ${view === "analysis" ? "bg-[#7C3AED] text-white" : "text-slate-600"}`}
+            >
+              AI Analysis
+            </button>
+          </div>
         </div>
       </div>
+
+      {convertError && (
+        <div className="px-4 py-2 text-xs text-red-600 bg-red-50 border-b border-red-100">
+          {convertError}
+        </div>
+      )}
 
       {view === "analysis" ? (
         <div className="overflow-y-auto flex-1 p-5 bg-white">
@@ -112,7 +183,7 @@ export function ConversationChat({ detail, loading }: Props) {
             )}
           </div>
           {lead && (
-            <div className="border-t bg-white p-4 space-y-2">
+            <div ref={leadPanelRef} className="border-t bg-white p-4 space-y-2">
               <p className="text-xs font-semibold text-[#6B7280] tracking-wider uppercase">Lead</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                 {lead.name && <><span className="text-[#6B7280]">Name</span><span className="text-[#111827]">{lead.name}</span></>}
