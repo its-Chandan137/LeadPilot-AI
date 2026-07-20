@@ -37,7 +37,7 @@ type ChatMessage = {
   status?: MessageStatus;
 };
 
-type WidgetStatus = "collapsed" | "open" | "loading" | "error";
+type WidgetStatus = "collapsed" | "open" | "loading" | "error" | "minimized";
 
 type ErrorType = "config" | "conversation" | "send" | null;
 
@@ -328,6 +328,9 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
     }
   }, [status, conversationId, config?.mode]);
 
+  function minimizeWidget() {
+    setStatus("minimized");
+  }
   async function openWidget() {
     setStatus("open");
     if (!config) return;
@@ -744,7 +747,7 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
           color={activeColor}
           fontFamily={config.fontFamily}
           showBranding={config.showBranding}
-          status={status}
+          status={status === "minimized" ? "open" : status}
           mode={mode}
           messages={messages}
           draft={draft}
@@ -782,6 +785,7 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
           config={config}
           status={status}
           openWidget={openWidget}
+          minimizeWidget={minimizeWidget}
           closeWidget={() => setStatus("collapsed")}
           messages={renderMessages()}
           scrollRef={scrollRef}

@@ -35,14 +35,14 @@ type FusionTemplateProps = {
 
   config: WidgetConfig;
 
-  status: "collapsed" | "open" | "loading" | "error";
+  status: "collapsed" | "open" | "loading" | "error" | "minimized";
 
   messages: ReactNode;
 
   scrollRef: RefObject<HTMLDivElement>;
 
   openWidget: () => void;
-
+  minimizeWidget: () => void;
   closeWidget: () => void;
 
   footer: FusionFooterProps;
@@ -86,8 +86,8 @@ function fusionStyles(color: string, font: string) {
     @keyframes lp-fusion-rise { from { opacity: 0; transform: translateY(18px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
     @media (max-width: 520px) {
       .lp-fusion { bottom: 10px; }
-      .lp-fusion-panel { width: calc(100vw - 20px); height: min(620px, calc(100vh - 82px)); border-radius: 22px; }
-      .lp-fusion-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+      .lp-fusion-panel { width: calc(100vw - 40px);max-width: 360px; height: 500px; max-height: 70vh;
+ border-radius: 22px;}      .lp-fusion-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
     }
     .lp-fusion-poweredby { text-align: center; padding: 8px 12px 10px; font-size: 11px; color: #94a3b8; background: rgba(255,255,255,0.7); border-top: 1px solid rgba(148,163,184,0.16); flex-shrink: 0; }
   `;
@@ -186,6 +186,7 @@ export function FusionTemplate({
   config,
   status,
   openWidget,
+  minimizeWidget,
   closeWidget,
   messages,
   scrollRef,
@@ -202,6 +203,10 @@ export function FusionTemplate({
               <path d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
             </svg>
             <span className="lp-fusion-placeholder">Ask LeadPilot AI...</span>
+          </button>
+        ) : status === "minimized" ? (
+          <button className="lp-fusion-launcher lp-fusion-placeholder" onClick={openWidget}>
+            💬 Continue Chat...
           </button>
         ) : (
           <section aria-label="LeadPilot chat" className="lp-fusion-panel" role="dialog" aria-modal="true">
@@ -226,11 +231,33 @@ export function FusionTemplate({
                   </p>
                 </div>
               </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      aria-label="Minimize chat"
+                      className="lp-fusion-close"
+                      onClick={minimizeWidget}
+                      type="button"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                      >
+                        <path
+                          d="M3 8h10"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </button>
               <button aria-label="Close chat" className="lp-fusion-close" onClick={closeWidget} type="button">
                 <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 16 16" width="16">
                   <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
                 </svg>
               </button>
+              </div>
             </header>
             <div className="lp-messages" ref={scrollRef} role="log" aria-label="Chat messages" aria-live="polite">
               {messages}
