@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, Users, ChevronLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { LeadSidebar } from "./lead-sidebar";
@@ -46,6 +47,7 @@ type LeadDetailData = {
 };
 
 export function LeadsClient({ projectId }: { projectId: string }) {
+  const searchParams = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -85,6 +87,14 @@ export function LeadsClient({ projectId }: { projectId: string }) {
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
+
+  useEffect(() => {
+    const leadId = searchParams.get("lead");
+    if (leadId && !selectedId) {
+      setSelectedId(leadId);
+      setMobileView("detail");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!selectedId) {
