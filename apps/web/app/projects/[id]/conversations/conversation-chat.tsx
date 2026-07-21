@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ConversationAnalysis } from "@/components/crm/ConversationAnalysis";
@@ -38,7 +38,6 @@ export function ConversationChat({ detail, loading }: Props) {
   const [view, setView] = useState<"chat" | "analysis">("chat");
   const [converting, setConverting] = useState(false);
   const [convertError, setConvertError] = useState<string | null>(null);
-  const leadPanelRef = useRef<HTMLDivElement | null>(null);
   if (loading) {
     return (
       <div className="flex-1 p-6 space-y-6">
@@ -79,7 +78,7 @@ export function ConversationChat({ detail, loading }: Props) {
 
   async function handleConvertOrView() {
     if (hasLead) {
-      leadPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      router.push(`/projects/${project.id}/leads?lead=${lead!.id}`);
       return;
     }
     if (!canConvert) return;
@@ -183,7 +182,7 @@ export function ConversationChat({ detail, loading }: Props) {
             )}
           </div>
           {lead && (
-            <div ref={leadPanelRef} className="border-t bg-white p-4 space-y-2">
+            <div className="border-t bg-white p-4 space-y-2">
               <p className="text-xs font-semibold text-[#6B7280] tracking-wider uppercase">Lead</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                 {lead.name && <><span className="text-[#6B7280]">Name</span><span className="text-[#111827]">{lead.name}</span></>}

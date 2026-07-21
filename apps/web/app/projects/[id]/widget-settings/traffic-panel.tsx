@@ -669,17 +669,14 @@ function GroupRow({
   return (
     <div className={ROW_GRID}>
       <div className="w-4 shrink-0">
-        {direct ? (
-          <span aria-hidden="true" className="block w-4" />
-        ) : (
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={onSelectChange}
-            aria-label={`Select ${group.domain}`}
-            className="w-4 h-4 accent-[#7C3AED] cursor-pointer rounded"
-          />
-        )}
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onSelectChange}
+          disabled={direct}
+          aria-label={`Select ${group.domain}`}
+          className="w-4 h-4 accent-[#7C3AED] cursor-pointer rounded"
+        />
       </div>
       <div className="min-w-0 truncate">
         <p className="text-sm font-medium text-[#111827] truncate" title={group.domain}>
