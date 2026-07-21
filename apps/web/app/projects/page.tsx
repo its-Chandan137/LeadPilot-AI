@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { HomeLayout } from "@/components/layout";
 import { listProjects, toWidgetConfig } from "@/lib/widget-store";
 import { getCurrentWorkspaceId } from "@/lib/auth";
@@ -20,12 +19,10 @@ export default async function ProjectsPage({
 
   return (
     <HomeLayout>
-      <Suspense fallback={<div className="mt-8 text-center text-slate-500">Loading...</div>}>
-        <ProjectsPageClient
-          projects={mapped}
-          defaultOpen={searchParams?.new === "1"}
-        />
-      </Suspense>
+      <ProjectsPageClient
+        projects={mapped}
+        defaultOpen={searchParams?.new === "1"}
+      />
     </HomeLayout>
   );
 }
