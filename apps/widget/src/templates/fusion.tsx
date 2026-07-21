@@ -212,7 +212,7 @@ export function FusionTemplate({
           <section aria-label="LeadPilot chat" className="lp-fusion-panel" role="dialog" aria-modal="true">
             <header className="lp-fusion-header">
               <div className="lp-fusion-identity">
-                <div className="lp-fusion-avatar" aria-hidden="true">
+                <div className="lp-fusion-avatar"   aria-hidden="true">
                   {config?.avatarUrl ? (
                     <img
                       src={config.avatarUrl}
