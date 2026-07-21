@@ -1,0 +1,187 @@
+[TRACE][STAGE2] agent published audio track: {"kind":1,"source":2,"muted":false,"trackName":"roomio_audio"}
+[TRACE][STAGE8] agent localParticipant.trackPublications: [{"kind":1,"source":2}]
+[TRACE][STAGE2b] after waitForSubscription: {"sid":"TR_AMHvvA5MZGS8PC"}
+[TRACE][STAGE1] TTS bytes received: 20400 sampleRate:24000 channels:1 durationSec:0.42 firstBytes:[248,255,249,255,248,255,250,255]
+[TRACE][STAGE2c] captureFrame ENTER #1 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #2 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #3 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #4 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2] agent published audio track: {"kind":1,"source":2,"muted":false,"trackName":"roomio_audio"}
+[TRACE][STAGE8] agent localParticipant.trackPublications: [{"kind":1,"source":2}]
+[TRACE][STAGE2b] after waitForSubscription: {"sid":"TR_AMEVutvkKZd4XA"}
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[68,0,53,0,34,0,11,0]
+[TRACE][STAGE2c] captureFrame ENTER #1 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #2 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #3 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #4 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2] agent published audio track: {"kind":1,"source":2,"muted":false,"trackName":"roomio_audio"}
+[TRACE][STAGE8] agent localParticipant.trackPublications: [{"kind":1,"source":2}]
+[TRACE][STAGE2b] after waitForSubscription: {"sid":"TR_AMo7mpAmK3f5AV"}
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[25,0,26,0,27,0,28,0]
+[TRACE][STAGE2c] captureFrame ENTER #1 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #2 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #3 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #4 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2] agent published audio track: {"kind":1,"source":2,"muted":false,"trackName":"roomio_audio"}
+[TRACE][STAGE8] agent localParticipant.trackPublications: [{"kind":1,"source":2}]
+[TRACE][STAGE2b] after waitForSubscription: {"sid":"TR_AMGQ4KEiryNec9"}
+[TRACE][STAGE1] TTS bytes received: 19800 sampleRate:24000 channels:1 durationSec:0.41 firstBytes:[9,0,4,0,252,255,242,255]
+[TRACE][STAGE2c] captureFrame ENTER #1 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #2 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #3 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #4 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2] agent published audio track: {"kind":1,"source":2,"muted":false,"trackName":"roomio_audio"}
+[TRACE][STAGE8] agent localParticipant.trackPublications: [{"kind":1,"source":2}]
+[TRACE][STAGE2b] after waitForSubscription: {"sid":"TR_AMTWi4aZHMUdYV"}
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[246,255,237,255,233,255,233,255]
+[TRACE][STAGE2c] captureFrame ENTER #1 {"samples":2400,"startedDone":true,"playbackDone":false}
+[TRACE][STAGE2c] captureFrame ENTER #2 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #3 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #4 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[34,0,36,0,36,0,34,0]
+[TRACE][STAGE2c] captureFrame ENTER #1 {"samples":2400,"startedDone":false,"playbackDone":true}
+[TRACE][STAGE2] agent published audio track: {"kind":1,"source":2,"muted":false,"trackName":"roomio_audio"}
+[TRACE][STAGE8] agent localParticipant.trackPublications: [{"kind":1,"source":2}]
+[TRACE][STAGE2b] after waitForSubscription: {"sid":"TR_AM7H73GkJbxHxo"}
+[TRACE][STAGE1] TTS bytes received: 18600 sampleRate:24000 channels:1 durationSec:0.39 firstBytes:[219,255,217,255,215,255,208,255]
+[TRACE][STAGE2c] captureFrame ENTER #1 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #2 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #3 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2] agent published audio track: {"kind":1,"source":2,"muted":false,"trackName":"roomio_audio"}
+[TRACE][STAGE8] agent localParticipant.trackPublications: [{"kind":1,"source":2}]
+[TRACE][STAGE2b] after waitForSubscription: {"sid":"TR_AMLX6GSRFEg6dh"}
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[23,0,22,0,18,0,17,0]
+[TRACE][STAGE2c] captureFrame ENTER #1 {"samples":2400,"startedDone":true,"playbackDone":false}
+[TRACE][STAGE2c] captureFrame ENTER #2 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #3 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE2c] captureFrame ENTER #4 {"samples":2400,"startedDone":true,"playbackDone":true}
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[143,255,151,255,172,255,196,255]
+[TRACE][STAGE1] TTS bytes received: 19800 sampleRate:24000 channels:1 durationSec:0.41 firstBytes:[25,0,28,0,33,0,35,0]
+[TRACE][STAGE1] TTS bytes received: 24000 sampleRate:24000 channels:1 durationSec:0.50 firstBytes:[58,0,211,255,245,255,2,0]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[212,255,212,255,218,255,222,255]
+[TRACE][STAGE1] TTS bytes received: 20400 sampleRate:24000 channels:1 durationSec:0.42 firstBytes:[23,0,22,0,22,0,23,0]
+[TRACE][STAGE1] TTS bytes received: 24000 sampleRate:24000 channels:1 durationSec:0.50 firstBytes:[221,255,5,0,213,255,221,255]
+[TRACE][STAGE1] TTS bytes received: 18000 sampleRate:24000 channels:1 durationSec:0.38 firstBytes:[7,0,7,0,8,0,6,0]
+[TRACE][STAGE1] TTS bytes received: 24000 sampleRate:24000 channels:1 durationSec:0.50 firstBytes:[35,0,224,255,244,255,245,255]
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[8,0,6,0,13,0,20,0]
+[TRACE][STAGE1] TTS bytes received: 20400 sampleRate:24000 channels:1 durationSec:0.42 firstBytes:[5,0,8,0,11,0,16,0]
+[TRACE][STAGE1] TTS bytes received: 20400 sampleRate:24000 channels:1 durationSec:0.42 firstBytes:[231,255,9,0,31,0,47,0]
+[TRACE][STAGE1] TTS bytes received: 22800 sampleRate:24000 channels:1 durationSec:0.47 firstBytes:[241,255,242,255,241,255,240,255]
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[27,0,29,0,29,0,32,0]
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[25,0,24,0,22,0,24,0]
+[TRACE][STAGE1] TTS bytes received: 18000 sampleRate:24000 channels:1 durationSec:0.38 firstBytes:[203,255,192,255,184,255,182,255]
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[10,0,14,0,18,0,19,0]
+[TRACE][STAGE1] TTS bytes received: 143400 sampleRate:24000 channels:1 durationSec:2.99 firstBytes:[243,255,240,255,235,255,231,255]
+[TRACE][STAGE1] TTS bytes received: 20400 sampleRate:24000 channels:1 durationSec:0.42 firstBytes:[243,255,245,255,251,255,2,0]
+[TRACE][STAGE1] TTS bytes received: 183000 sampleRate:24000 channels:1 durationSec:3.81 firstBytes:[248,255,250,255,250,255,248,255]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[195,255,174,255,149,255,125,255]
+[TRACE][STAGE1] TTS bytes received: 186600 sampleRate:24000 channels:1 durationSec:3.89 firstBytes:[238,255,239,255,241,255,240,255]
+[TRACE][STAGE1] TTS bytes received: 20400 sampleRate:24000 channels:1 durationSec:0.42 firstBytes:[94,1,82,1,55,1,27,1]
+[TRACE][STAGE1] TTS bytes received: 194400 sampleRate:24000 channels:1 durationSec:4.05 firstBytes:[8,0,7,0,5,0,5,0]
+[TRACE][STAGE1] TTS bytes received: 19800 sampleRate:24000 channels:1 durationSec:0.41 firstBytes:[205,0,186,0,161,0,130,0]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[226,255,226,255,225,255,225,255]
+[TRACE][STAGE1] TTS bytes received: 193200 sampleRate:24000 channels:1 durationSec:4.03 firstBytes:[10,0,10,0,10,0,11,0]
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[25,0,27,0,27,0,26,0]
+[TRACE][STAGE1] TTS bytes received: 171000 sampleRate:24000 channels:1 durationSec:3.56 firstBytes:[252,255,252,255,251,255,253,255]
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[1,0,3,0,1,0,1,0]
+[TRACE][STAGE1] TTS bytes received: 169800 sampleRate:24000 channels:1 durationSec:3.54 firstBytes:[4,0,15,0,14,0,9,0]
+[TRACE][STAGE1] TTS bytes received: 22800 sampleRate:24000 channels:1 durationSec:0.47 firstBytes:[27,0,25,0,22,0,22,0]
+[TRACE][STAGE1] TTS bytes received: 19800 sampleRate:24000 channels:1 durationSec:0.41 firstBytes:[4,0,253,255,240,255,237,255]
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[179,255,142,255,118,255,107,255]
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[251,255,4,0,8,0,21,0]
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[15,0,15,0,16,0,16,0]
+[TRACE][STAGE1] TTS bytes received: 18000 sampleRate:24000 channels:1 durationSec:0.38 firstBytes:[220,255,212,255,216,255,217,255]
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[250,255,249,255,250,255,252,255]
+[TRACE][STAGE1] TTS bytes received: 19800 sampleRate:24000 channels:1 durationSec:0.41 firstBytes:[9,0,8,0,7,0,4,0]
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[231,255,233,255,231,255,230,255]
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[33,0,35,0,34,0,34,0]
+[TRACE][STAGE1] TTS bytes received: 20400 sampleRate:24000 channels:1 durationSec:0.42 firstBytes:[32,0,32,0,32,0,31,0]
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[6,0,5,0,8,0,9,0]
+[TRACE][STAGE1] TTS bytes received: 61800 sampleRate:24000 channels:1 durationSec:1.29 firstBytes:[28,0,25,0,32,0,22,0]
+[TRACE][STAGE1] TTS bytes received: 72000 sampleRate:24000 channels:1 durationSec:1.50 firstBytes:[84,0,67,0,74,0,79,0]
+[TRACE][STAGE1] TTS bytes received: 70800 sampleRate:24000 channels:1 durationSec:1.48 firstBytes:[46,0,35,0,42,0,43,0]
+[TRACE][STAGE1] TTS bytes received: 60600 sampleRate:24000 channels:1 durationSec:1.26 firstBytes:[210,255,222,255,219,255,234,255]
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[15,0,32,0,48,0,57,0]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[7,0,5,0,6,0,6,0]
+[TRACE][STAGE1] TTS bytes received: 71400 sampleRate:24000 channels:1 durationSec:1.49 firstBytes:[11,0,9,0,7,0,22,0]
+[TRACE][STAGE1] TTS bytes received: 72600 sampleRate:24000 channels:1 durationSec:1.51 firstBytes:[232,255,231,255,233,255,233,255]
+[TRACE][STAGE1] TTS bytes received: 74400 sampleRate:24000 channels:1 durationSec:1.55 firstBytes:[185,255,232,255,36,0,242,255]
+[TRACE][STAGE1] TTS bytes received: 70800 sampleRate:24000 channels:1 durationSec:1.48 firstBytes:[245,255,242,255,238,255,241,255]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[255,255,253,255,253,255,255,255]
+[TRACE][STAGE1] TTS bytes received: 20400 sampleRate:24000 channels:1 durationSec:0.42 firstBytes:[192,255,208,255,221,255,235,255]
+[TRACE][STAGE1] TTS bytes received: 155400 sampleRate:24000 channels:1 durationSec:3.24 firstBytes:[4,0,4,0,253,255,250,255]
+[TRACE][STAGE1] TTS bytes received: 292200 sampleRate:24000 channels:1 durationSec:6.09 firstBytes:[2,0,2,0,1,0,1,0]
+[TRACE][STAGE1] TTS bytes received: 201000 sampleRate:24000 channels:1 durationSec:4.19 firstBytes:[255,255,1,0,2,0,255,255]
+[TRACE][STAGE1] TTS bytes received: 183600 sampleRate:24000 channels:1 durationSec:3.83 firstBytes:[8,0,6,0,4,0,4,0]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[128,0,127,0,115,0,91,0]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[216,255,213,255,217,255,222,255]
+[TRACE][STAGE1] TTS bytes received: 143400 sampleRate:24000 channels:1 durationSec:2.99 firstBytes:[42,0,31,0,18,0,0,0]
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[11,0,250,255,234,255,220,255]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[230,255,228,255,227,255,226,255]
+[TRACE][STAGE1] TTS bytes received: 18600 sampleRate:24000 channels:1 durationSec:0.39 firstBytes:[225,255,207,255,190,255,176,255]
+[TRACE][STAGE1] TTS bytes received: 155400 sampleRate:24000 channels:1 durationSec:3.24 firstBytes:[29,0,29,0,30,0,31,0]
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[245,255,250,255,252,255,253,255]
+[TRACE][STAGE1] TTS bytes received: 24000 sampleRate:24000 channels:1 durationSec:0.50 firstBytes:[6,0,9,0,238,255,227,255]
+[TRACE][STAGE1] TTS bytes received: 156000 sampleRate:24000 channels:1 durationSec:3.25 firstBytes:[254,255,243,255,225,255,212,255]
+[TRACE][STAGE1] TTS bytes received: 19200 sampleRate:24000 channels:1 durationSec:0.40 firstBytes:[252,255,30,0,58,0,75,0]
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[80,0,80,0,77,0,69,0]
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[195,255,201,255,210,255,220,255]
+[TRACE][STAGE1] TTS bytes received: 147600 sampleRate:24000 channels:1 durationSec:3.08 firstBytes:[245,255,240,255,234,255,229,255]
+[TRACE][STAGE1] TTS bytes received: 24000 sampleRate:24000 channels:1 durationSec:0.50 firstBytes:[186,255,28,0,234,255,227,255]
+[TRACE][STAGE1] TTS bytes received: 24000 sampleRate:24000 channels:1 durationSec:0.50 firstBytes:[225,255,206,255,193,255,190,255]
+[TRACE][STAGE1] TTS bytes received: 153000 sampleRate:24000 channels:1 durationSec:3.19 firstBytes:[196,255,210,255,237,255,11,0]
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[248,255,252,255,0,0,1,0]
+[TRACE][STAGE1] TTS bytes received: 19800 sampleRate:24000 channels:1 durationSec:0.41 firstBytes:[242,255,239,255,239,255,242,255]
+[TRACE][STAGE1] TTS bytes received: 155400 sampleRate:24000 channels:1 durationSec:3.24 firstBytes:[2,0,2,0,5,0,12,0]
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[232,255,236,255,241,255,250,255]
+[TRACE][STAGE1] TTS bytes received: 20400 sampleRate:24000 channels:1 durationSec:0.42 firstBytes:[186,255,188,255,189,255,190,255]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[246,255,247,255,247,255,249,255]
+[TRACE][STAGE1] TTS bytes received: 19200 sampleRate:24000 channels:1 durationSec:0.40 firstBytes:[233,255,233,255,230,255,226,255]
+[TRACE][STAGE1] TTS bytes received: 154800 sampleRate:24000 channels:1 durationSec:3.23 firstBytes:[14,0,20,0,21,0,16,0]
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[233,255,236,255,237,255,237,255]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[32,0,51,0,58,0,64,0]
+[TRACE][STAGE1] TTS bytes received: 171600 sampleRate:24000 channels:1 durationSec:3.58 firstBytes:[29,0,28,0,22,0,12,0]
+[TRACE][STAGE1] TTS bytes received: 213000 sampleRate:24000 channels:1 durationSec:4.44 firstBytes:[233,255,238,255,244,255,249,255]
+[TRACE][STAGE1] TTS bytes received: 172200 sampleRate:24000 channels:1 durationSec:3.59 firstBytes:[8,0,11,0,15,0,16,0]
+[TRACE][STAGE1] TTS bytes received: 20400 sampleRate:24000 channels:1 durationSec:0.42 firstBytes:[209,255,216,255,221,255,227,255]
+[TRACE][STAGE1] TTS bytes received: 19800 sampleRate:24000 channels:1 durationSec:0.41 firstBytes:[6,0,9,0,12,0,12,0]
+[TRACE][STAGE1] TTS bytes received: 71400 sampleRate:24000 channels:1 durationSec:1.49 firstBytes:[235,255,238,255,240,255,242,255]
+[TRACE][STAGE1] TTS bytes received: 56400 sampleRate:24000 channels:1 durationSec:1.18 firstBytes:[216,255,3,0,12,0,187,255]
+[TRACE][STAGE1] TTS bytes received: 24000 sampleRate:24000 channels:1 durationSec:0.50 firstBytes:[89,0,0,0,218,255,197,255]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[31,0,31,0,29,0,27,0]
+[TRACE][STAGE1] TTS bytes received: 230400 sampleRate:24000 channels:1 durationSec:4.80 firstBytes:[8,0,6,0,2,0,3,0]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[253,255,250,255,250,255,251,255]
+[TRACE][STAGE1] TTS bytes received: 19800 sampleRate:24000 channels:1 durationSec:0.41 firstBytes:[13,0,16,0,16,0,9,0]
+[TRACE][STAGE1] TTS bytes received: 136800 sampleRate:24000 channels:1 durationSec:2.85 firstBytes:[1,0,1,0,2,0,255,255]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[253,255,255,255,252,255,254,255]
+[TRACE][STAGE1] TTS bytes received: 22200 sampleRate:24000 channels:1 durationSec:0.46 firstBytes:[213,255,218,255,220,255,222,255]
+[TRACE][STAGE1] TTS bytes received: 177000 sampleRate:24000 channels:1 durationSec:3.69 firstBytes:[3,0,3,0,5,0,6,0]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[42,0,25,0,28,0,39,0]
+[TRACE][STAGE1] TTS bytes received: 18600 sampleRate:24000 channels:1 durationSec:0.39 firstBytes:[26,0,28,0,27,0,26,0]
+[TRACE][STAGE1] TTS bytes received: 148800 sampleRate:24000 channels:1 durationSec:3.10 firstBytes:[178,255,191,255,218,255,1,0]
+[TRACE][STAGE1] TTS bytes received: 144600 sampleRate:24000 channels:1 durationSec:3.01 firstBytes:[240,255,237,255,251,255,16,0]
+[TRACE][STAGE1] TTS bytes received: 249000 sampleRate:24000 channels:1 durationSec:5.19 firstBytes:[0,0,1,0,255,255,252,255]
+[TRACE][STAGE1] TTS bytes received: 603600 sampleRate:24000 channels:1 durationSec:12.57 firstBytes:[247,255,248,255,248,255,248,255]
+[TRACE][STAGE1] TTS bytes received: 144600 sampleRate:24000 channels:1 durationSec:3.01 firstBytes:[236,255,237,255,241,255,249,255]
+[TRACE][STAGE1] TTS bytes received: 20400 sampleRate:24000 channels:1 durationSec:0.42 firstBytes:[243,255,244,255,244,255,244,255]
+[TRACE][STAGE1] TTS bytes received: 137400 sampleRate:24000 channels:1 durationSec:2.86 firstBytes:[244,255,242,255,244,255,248,255]
+[TRACE][STAGE1] TTS bytes received: 981600 sampleRate:24000 channels:1 durationSec:20.45 firstBytes:[213,255,209,255,208,255,206,255]
+[TRACE][STAGE1] TTS bytes received: 24000 sampleRate:24000 channels:1 durationSec:0.50 firstBytes:[27,0,237,255,248,255,240,255]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[250,255,248,255,242,255,236,255]
+[TRACE][STAGE1] TTS bytes received: 20400 sampleRate:24000 channels:1 durationSec:0.42 firstBytes:[6,0,11,0,12,0,10,0]
+[TRACE][STAGE1] TTS bytes received: 95400 sampleRate:24000 channels:1 durationSec:1.99 firstBytes:[255,255,1,0,255,255,254,255]
+[TRACE][STAGE1] TTS bytes received: 94800 sampleRate:24000 channels:1 durationSec:1.98 firstBytes:[227,255,228,255,235,255,242,255]
+[TRACE][STAGE1] TTS bytes received: 147000 sampleRate:24000 channels:1 durationSec:3.06 firstBytes:[216,255,215,255,216,255,218,255]
+[TRACE][STAGE1] TTS bytes received: 150000 sampleRate:24000 channels:1 durationSec:3.13 firstBytes:[238,255,235,255,237,255,237,255]
+[TRACE][STAGE1] TTS bytes received: 326400 sampleRate:24000 channels:1 durationSec:6.80 firstBytes:[204,255,235,255,5,0,20,0]
+[TRACE][STAGE1] TTS bytes received: 418800 sampleRate:24000 channels:1 durationSec:8.72 firstBytes:[14,0,13,0,14,0,15,0]
+[TRACE][STAGE1] TTS bytes received: 94800 sampleRate:24000 channels:1 durationSec:1.98 firstBytes:[7,0,2,0,254,255,252,255]
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[15,0,17,0,21,0,25,0]
+[TRACE][STAGE1] TTS bytes received: 21000 sampleRate:24000 channels:1 durationSec:0.44 firstBytes:[222,255,220,255,217,255,214,255]
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[241,255,213,255,186,255,162,255]
+[TRACE][STAGE1] TTS bytes received: 154800 sampleRate:24000 channels:1 durationSec:3.23 firstBytes:[248,255,250,255,250,255,252,255]
+[TRACE][STAGE1] TTS bytes received: 444600 sampleRate:24000 channels:1 durationSec:9.26 firstBytes:[2,0,3,0,3,0,2,0]
+[TRACE][STAGE1] TTS bytes received: 296400 sampleRate:24000 channels:1 durationSec:6.17 firstBytes:[3,0,2,0,0,0,0,0]
+[TRACE][STAGE1] TTS bytes received: 236400 sampleRate:24000 channels:1 durationSec:4.92 firstBytes:[255,255,1,0,255,255,0,0]
+[TRACE][STAGE1] TTS bytes received: 343200 sampleRate:24000 channels:1 durationSec:7.15 firstBytes:[30,0,23,0,18,0,9,0]
+[TRACE][STAGE1] TTS bytes received: 21600 sampleRate:24000 channels:1 durationSec:0.45 firstBytes:[37,0,35,0,38,0,36,0]

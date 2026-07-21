@@ -199,6 +199,15 @@ function styles(color: string, font: string) {
     .lp-mic svg { width: 18px; height: 18px; }
     .lp-form-voice { display: flex; align-items: center; justify-content: center; padding: 16px; background: #fff; flex-shrink: 0; }
 
+    .lp-voice-transcript { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: #f8fafc; border-top: 1px solid rgba(15,23,42,0.08); }
+    .lp-vt-line { font-size: 13px; line-height: 1.45; color: #334155; word-break: break-word; }
+    .lp-vt-role { font-weight: 700; }
+    .lp-vt-user .lp-vt-role { color: #2563eb; }
+    .lp-vt-assistant .lp-vt-role { color: #0f766e; }
+    .lp-vt-pending { opacity: 0.7; }
+    .lp-vt-caret { animation: lp-blink 1s step-end infinite; }
+    @keyframes lp-blink { 50% { opacity: 0; } }
+
     .lp-loading { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 16px; background: #f8fafc; }
     .lp-loading-row { display: flex; }
     .lp-loading-row-right { justify-content: flex-end; }
@@ -272,6 +281,8 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
 
   const [voiceState, setVoiceState] = useState<"idle" | "connecting" | "active" | "ending">("idle");
   const [room, setRoom] = useState<Room | null>(null);
+  // Live voice transcript (user speech + AI reply), shown word-by-word during a call.
+  const [liveTranscript, setLiveTranscript] = useState<{ role: "user" | "assistant"; text: string; final: boolean }[]>([]);
 
   const visitorId = useMemo(createVisitorId, []);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -470,9 +481,24 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
     }
   }
 
+  // Shared AudioContext for data-channel TTS playback. Must be created/resumed
+  // inside a user gesture (startVoiceCall) or the browser autoplay policy keeps
+  // it suspended and all playback is silent.
+  const getAudioCtx = () => {
+    if (!(window as any).__lpAudioCtx) {
+      (window as any).__lpAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    return (window as any).__lpAudioCtx as AudioContext;
+  };
+  const primeAudio = () => {
+    const c = getAudioCtx();
+    if (c.state === "suspended") c.resume().catch(() => {});
+  };
+
   async function startVoiceCall() {
     if (voiceState !== "idle" || !config) return;
     setVoiceState("connecting");
+    primeAudio(); // unlock audio within the click gesture
     try {
       const data = await requestJson<{ token: string; roomName: string }>(`${apiUrl}/api/voice/token`, {
         method: "POST",
@@ -480,38 +506,229 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
       });
       const newRoom = new Room();
 
-      // Play the agent's audio once a remote track is subscribed. Without this
-      // the visitor never hears the assistant (the local mic is published but
-      // remote audio is never attached to an <audio> element).
-      newRoom.on(RoomEvent.TrackSubscribed, (track) => {
-        if (track.kind === "audio") {
-          const el = track.attach() as HTMLAudioElement;
-          el.style.display = "none";
-          document.body.appendChild(el);
-          el.play().catch((e) => console.error("Voice playback failed:", e));
-        }
+      // Collect attached remote-audio elements so we can (re)trigger playback
+      // after the browser grants autoplay permission via startAudio().
+      const remoteAudioEls = new Set<HTMLAudioElement>();
+
+      const attachAndPlay = (track: any, participant: any) => {
+        if (track.kind !== "audio") return;
+        // STAGE 4
+        console.log("[STAGE4] TrackSubscribed", {
+          kind: track.kind,
+          participant: participant?.identity,
+          sid: track.sid,
+          mediaStreamTrackReadyState: track.mediaStreamTrack?.readyState,
+        });
+        const el = track.attach() as HTMLAudioElement;
+        // STAGE 5
+        console.log("[STAGE5] after track.attach()", {
+          element: el.tagName,
+          muted: el.muted,
+          paused: el.paused,
+          volume: el.volume,
+          readyState: el.readyState,
+          srcObject: el.srcObject ? "set" : "null",
+        });
+        el.style.position = "fixed";
+        el.style.width = "1px";
+        el.style.height = "1px";
+        el.style.opacity = "0";
+        el.style.pointerEvents = "none";
+        el.style.left = "-9999px";
+        document.body.appendChild(el);
+        remoteAudioEls.add(el);
+
+        // STAGE 6
+        console.log("[STAGE6] play() called");
+        el.play()
+          .then(() => console.log("[STAGE6] play() RESOLVED"))
+          .catch((e) => console.error("[STAGE6] play() REJECTED:", e));
+      };
+
+      // STAGE 3
+      newRoom.on(RoomEvent.ParticipantConnected, (p: any) => {
+        console.log("[STAGE3] ParticipantConnected", { identity: p.identity });
       });
+      newRoom.on(RoomEvent.TrackPublished, (pub: any) => {
+        console.log("[STAGE3] TrackPublished", {
+          identity: pub.participant?.identity,
+          kind: pub.kind,
+          sid: pub.trackSid,
+          source: pub.source,
+          isSubscribed: pub.isSubscribed,
+        });
+      });
+      newRoom.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
+        console.log("[STAGE3] TrackSubscribed", {
+          identity: participant?.identity,
+          kind: track.kind,
+          sid: track.sid,
+          source: _pub?.source,
+          isSubscribed: _pub?.isSubscribed,
+        });
+        attachAndPlay(track, participant);
+      });
+      newRoom.on(RoomEvent.TrackUnsubscribed, (track: any) => {
+        console.log("[STAGE3] TrackUnsubscribed", { sid: track.sid, kind: track.kind });
+      });
+
+      // STAGE 7 — poll LiveKit inbound audio stats (bytes/packets received).
+      const statTimer = setInterval(async () => {
+        try {
+          for (const part of newRoom.remoteParticipants.values()) {
+            for (const pub of part.getTrackPublications()) {
+              if ((pub as any).track?.kind !== "audio") continue;
+              const report = await (pub as any).getRTCStatsReport?.();
+              if (!report) continue;
+              report.forEach((s: any) => {
+                if (s.type === "inbound-rtp" && s.kind === "audio") {
+                  console.log("[STAGE7] inbound-rtp audio", {
+                    bytesReceived: s.bytesReceived,
+                    packetsReceived: s.packetsReceived,
+                    audioLevel: s.audioLevel,
+                    jitter: s.jitter,
+                    packetsLost: s.packetsLost,
+                    trackIdentifier: s.trackIdentifier,
+                  });
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.error("[STAGE7] stats error:", e);
+        }
+      }, 2000);
 
       // The browser may suspend autoplay; re-unlock audio when that happens.
       newRoom.on(RoomEvent.AudioPlaybackStatusChanged, (allowed: boolean) => {
-        if (!allowed) newRoom.startAudio().catch(() => {});
+        console.log("[STAGE6] AudioPlaybackStatusChanged", { allowed });
+        if (!allowed) {
+          newRoom
+            .startAudio()
+            .then(() => {
+              console.log("[STAGE6] startAudio() resolved; replaying attached tracks");
+              remoteAudioEls.forEach((el) => {
+                if (el.paused) el.play().catch(() => {});
+              });
+            })
+            .catch((e) => console.error("[STAGE6] startAudio() rejected:", e));
+        }
+      });
+      newRoom.on(RoomEvent.ConnectionStateChanged, (state) => {
+        console.log("[STAGE3] Connection state:", state);
       });
 
-      newRoom.on(RoomEvent.ConnectionStateChanged, (state) => {
-        console.log("[Voice] Connection state:", state);
+      // [DATACH] Receive agent TTS audio (RAW Int16 PCM chunks) over the LiveKit
+      // Data channel. Each message: [0x01, seqHi, seqLo, lastFlag, ch] + PCM.
+      // All chunks of one utterance are concatenated into a SINGLE AudioBuffer
+      // and played ONCE — no per-chunk WAV seams, no overlapping "fast voices".
+      // AudioContext is shared + unlocked in startVoiceCall (user gesture).
+      const SR = 24000;
+      let pending: Int16Array[] = [];
+      const playBuffer = (pcm: Int16Array) => {
+        // A zero-length buffer is invalid and throws "error from the audio
+        // device" on ctx.start(). Guard against it.
+        if (!pcm || pcm.length === 0) {
+          console.warn("[DATACH] skipping empty utterance");
+          return;
+        }
+        const ctx = getAudioCtx();
+        const play = () => {
+          try {
+            const buf = ctx.createBuffer(1, pcm.length, SR);
+            const f32 = new Float32Array(pcm.length);
+            for (let i = 0; i < pcm.length; i++) f32[i] = pcm[i] / 32768;
+            buf.copyToChannel(f32, 0);
+            const src = ctx.createBufferSource();
+            src.buffer = buf;
+            src.connect(ctx.destination);
+            src.onended = null;
+            src.start();
+            console.log("[DATACH] played utterance", { samples: pcm.length, durMs: Math.round((pcm.length / SR) * 1000) });
+          } catch (e) {
+            console.error("[DATACH] playBuffer error:", e);
+          }
+        };
+        // The AudioContext must be running before we start a source; resume is
+        // async, so wait for it (and retry) to avoid the WebAudio device error.
+        if (ctx.state === "suspended") {
+          ctx.resume().then(play).catch((e) => console.error("[DATACH] resume error:", e));
+        } else {
+          play();
+        }
+      };
+      newRoom.on(RoomEvent.DataReceived, (payload: any, participant: any, kind?: any, topic?: string) => {
+        const t = topic ?? payload?.topic ?? "";
+        // Live transcript (user speech + AI reply) streamed as JSON text.
+        if (t === "agent-transcript") {
+          try {
+            const raw: Uint8Array =
+              payload instanceof Uint8Array ? payload :
+              payload?.data instanceof Uint8Array ? payload.data :
+              new Uint8Array(payload);
+            const msg = JSON.parse(new TextDecoder().decode(raw)) as { role: "user" | "assistant"; text: string; final: boolean };
+            if (!msg || !msg.role) return;
+            setLiveTranscript((prev) => {
+              const next = [...prev];
+              if (msg.final) {
+                // Replace any pending (non-final) line of the same role with the final one.
+                const idx = next.findIndex((l) => l.role === msg.role && !l.final);
+                if (idx >= 0) next[idx] = { role: msg.role, text: msg.text, final: true };
+                else next.push({ role: msg.role, text: msg.text, final: true });
+              } else {
+                const idx = next.findIndex((l) => l.role === msg.role && !l.final);
+                if (idx >= 0) next[idx] = { role: msg.role, text: msg.text, final: false };
+                else next.push({ role: msg.role, text: msg.text, final: false });
+              }
+              return next;
+            });
+          } catch (e) {
+            console.error("[TRANSCRIPT] parse error:", e);
+          }
+          return;
+        }
+        if (t !== "agent-audio") return;
+        try {
+          const bytes: Uint8Array =
+            payload instanceof Uint8Array ? payload :
+            payload?.data instanceof Uint8Array ? payload.data :
+            new Uint8Array(payload);
+          if (bytes.length < 6 || bytes[0] !== 0x01) return;
+          const last = bytes[3] === 1;
+          // Copy PCM bytes into a fresh, correctly 2-byte-aligned Int16Array.
+          const pcmBytes = bytes.subarray(6);
+          const count = Math.floor(pcmBytes.length / 2);
+          const pcm = new Int16Array(count);
+          const dv = new DataView(pcmBytes.buffer, pcmBytes.byteOffset, count * 2);
+          for (let i = 0; i < count; i++) pcm[i] = dv.getInt16(i * 2, true);
+          pending.push(pcm);
+          if (!last) return;
+          // Concatenate all chunks into one continuous buffer and play once.
+          const total = pending.reduce((n, p) => n + p.length, 0);
+          const full = new Int16Array(total);
+          let off = 0;
+          for (const p of pending) { full.set(p, off); off += p.length; }
+          pending = [];
+          playBuffer(full);
+        } catch (e) {
+          console.error("[DATACH] play error:", e);
+        }
       });
 
       newRoom.on(RoomEvent.Disconnected, () => {
+        clearInterval(statTimer);
         setVoiceState("idle");
         setRoom(null);
       });
 
       await newRoom.connect(config.livekitUrl || "", data.token);
+      console.log("[STAGE3] Connected", { url: config.livekitUrl, room: newRoom.name });
       // Unlock audio playback inside the user-gesture (button click) context.
-      await newRoom.startAudio().catch(() => {});
+      await newRoom.startAudio().catch((e) => console.error("[STAGE6] startAudio() rejected:", e));
 
       const audioTrack = await createLocalAudioTrack();
       await newRoom.localParticipant.publishTrack(audioTrack);
+      console.log("[STAGE8] Local mic published (visitor microphone)");
 
       setRoom(newRoom);
       setVoiceState("active");
@@ -527,6 +744,7 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
     await room.disconnect();
     setRoom(null);
     setVoiceState("idle");
+    setLiveTranscript([]);
   }
 
   const hasUserMessages = messages.some((m) => m.role === "user");
@@ -600,6 +818,23 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
             <button className="lp-banner-retry" onClick={handleRetry} type="button">
               Retry
             </button>
+          </div>
+        )}
+        {voiceState === "active" && (
+          <div className="lp-voice-transcript">
+            {liveTranscript.length === 0 && (
+              <div className="lp-vt-line lp-vt-assistant lp-vt-pending">Listening…</div>
+            )}
+            {liveTranscript.map((line, i) => (
+              <div
+                key={i}
+                className={`lp-vt-line lp-vt-${line.role}${line.final ? "" : " lp-vt-pending"}`}
+              >
+                <span className="lp-vt-role">{line.role === "user" ? "You" : (config?.botName ?? "Assistant")}:</span>{" "}
+                <span className="lp-vt-text">{line.text}</span>
+                {!line.final && <span className="lp-vt-caret">▍</span>}
+              </div>
+            ))}
           </div>
         )}
         <div ref={bottomRef} />
