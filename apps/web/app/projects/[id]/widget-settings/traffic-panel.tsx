@@ -21,14 +21,13 @@ import type { AnalyticsData, ReferrerHit, ReferrerGroup, TrafficConfig } from ".
 
 type DomainFilter = "all" | "blocked";
 
-const ROW_SHELL =
-  "relative flex items-center gap-3 px-5 py-3 hover:bg-[#FAFAFA] transition-colors";
+const ROW_GRID =
+  "relative grid grid-cols-[1.5rem_20ch_4fr_4rem_1fr_7.5rem] items-center gap-3 px-5 py-3 hover:bg-[#FAFAFA] transition-colors";
 const ROW_HEADER_SHELL =
-  "relative flex items-center gap-3 px-5 py-2 border-b border-[#F3F4F6] bg-white";
+  "relative grid grid-cols-[1.5rem_20ch_4fr_4rem_1fr_7.5rem] items-center gap-3 px-5 py-2 border-b border-[#F3F4F6] bg-white";
 const COUNT_CENTER =
-  "pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-sm font-semibold text-[#111827] tabular-nums";
-const COUNT_HEADER =
-  "pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]";
+  "justify-self-end text-sm font-semibold text-[#111827] tabular-nums";
+const COUNT_HEADER = "justify-self-end text-xs text-[#9CA3AF]";
 const ACTION_BTN =
   "inline-flex items-center justify-center gap-1.5 w-full px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors disabled:opacity-50";
 const ACTION_BADGE =
@@ -432,7 +431,7 @@ export function TrafficPanel({
               <>
                 {selectMode && (
                   <div className={ROW_HEADER_SHELL}>
-                    <div className="w-4 shrink-0">
+                    <div className="flex items-center">
                       <input
                         ref={selectAllRef}
                         type="checkbox"
@@ -442,13 +441,13 @@ export function TrafficPanel({
                         className="w-4 h-4 accent-[#7C3AED] cursor-pointer rounded"
                       />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs text-[#9CA3AF]">
-                        {selected.size > 0 ? `${selected.size} selected` : ""}
-                      </span>
-                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer min-w-0">
+                      <span className="text-xs text-[#9CA3AF] select-none">Select all</span>
+                    </label>
+                    <span />
                     <span className={COUNT_HEADER}>Count</span>
-                    <div className="w-[7.5rem] shrink-0 text-xs text-[#9CA3AF] text-right">Action</div>
+                    <span />
+                    <div className="w-full text-xs text-[#9CA3AF] text-center">Action</div>
                   </div>
                 )}
                 {displayedGroups.map((group) => (
@@ -464,34 +463,30 @@ export function TrafficPanel({
                     onToggle={() => handleToggle(group)}
                   />
                 ))}
-                {selectMode && selected.size >= 1 && (
+                {selectMode && (
                   <div className="sticky bottom-0 z-10 bg-white border-t border-[#E5E7EB] shadow-[0_-2px_8px_rgba(17,24,39,0.04)] px-5 py-3 flex items-center justify-between gap-3">
                     <span className="text-xs text-[#6B7280] tabular-nums">{selected.size} selected</span>
                     <div className="flex items-center gap-2">
-                      {selectedUnblockedCount > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => void applyBulk("block")}
-                          disabled={selected.size === 0 || saving}
-                          className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
-                        >
-                          {selectedBlockedCount === 0
-                            ? `Block selected (${selected.size})`
-                            : `Block unblocked (${selectedUnblockedCount})`}
-                        </button>
-                      )}
-                      {selectedBlockedCount > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => void applyBulk("unblock")}
-                          disabled={selected.size === 0 || saving}
-                          className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-[#7C3AED] hover:text-[#7C3AED]"
-                        >
-                          {selectedUnblockedCount === 0
-                            ? `Unblock selected (${selected.size})`
-                            : `Unblock blocked (${selectedBlockedCount})`}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => void applyBulk("block")}
+                        disabled={selectedUnblockedCount === 0 || saving}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
+                      >
+                        {selectedBlockedCount === 0
+                          ? `Block selected (${selected.size})`
+                          : `Block unblocked (${selectedUnblockedCount})`}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void applyBulk("unblock")}
+                        disabled={selectedBlockedCount === 0 || saving}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-[#7C3AED] hover:text-[#7C3AED]"
+                      >
+                        {selectedUnblockedCount === 0
+                          ? `Unblock selected (${selected.size})`
+                          : `Unblock blocked (${selectedBlockedCount})`}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -628,19 +623,23 @@ function GroupRow({
 }) {
   if (!selectMode) {
     return (
-      <div className={ROW_SHELL}>
+      <div className={ROW_GRID}>
         <div className="w-8 h-8 rounded-full bg-[#F5F3FF] text-[#7C3AED] text-xs font-bold flex items-center justify-center shrink-0">
           {domainInitial(group.domain)}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-[#111827] truncate">{group.domain}</p>
-          <p className="text-xs text-[#9CA3AF]">
+        <div className="min-w-0 truncate">
+          <p className="text-sm font-medium text-[#111827] truncate" title={group.domain}>
+            {group.domain}
+          </p>
+          <p className="text-xs text-[#9CA3AF] truncate">
             Last seen {relativeTime(group.lastSeen)}
             {direct ? "" : ` · ${blocked ? "Blocked" : "Unblocked"}`}
           </p>
         </div>
+        <span />
         <span className={COUNT_CENTER}>{group.count}</span>
-        <div className="w-[7.5rem] shrink-0">
+        <span />
+        <div className="w-full shrink-0">
           {direct ? (
             <span
               className={`${ACTION_BADGE} border-slate-200 text-slate-400 cursor-not-allowed`}
@@ -668,7 +667,7 @@ function GroupRow({
   }
 
   return (
-    <div className={ROW_SHELL}>
+    <div className={ROW_GRID}>
       <div className="w-4 shrink-0">
         {direct ? (
           <span aria-hidden="true" className="block w-4" />
@@ -682,15 +681,19 @@ function GroupRow({
           />
         )}
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-[#111827] truncate">{group.domain}</p>
-        <p className="text-xs text-[#9CA3AF]">
+      <div className="min-w-0 truncate">
+        <p className="text-sm font-medium text-[#111827] truncate" title={group.domain}>
+          {group.domain}
+        </p>
+        <p className="text-xs text-[#9CA3AF] truncate">
           Last seen {relativeTime(group.lastSeen)}
           {direct ? "" : ` · ${blocked ? "Blocked" : "Unblocked"}`}
         </p>
       </div>
+      <span />
       <span className={COUNT_CENTER}>{group.count}</span>
-      <div className="w-[7.5rem] shrink-0">
+      <span />
+      <div className="w-full shrink-0">
         {direct ? (
           <span
             className={`${ACTION_BADGE} border-slate-200 text-slate-400 cursor-not-allowed`}

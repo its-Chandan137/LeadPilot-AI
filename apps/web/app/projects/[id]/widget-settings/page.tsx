@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { getSharedPrismaClient } from "@/lib/prisma";
 import { getTrafficAnalytics } from "@/lib/traffic-analytics";
 import type { TrafficConfig } from "@/lib/traffic-block";
@@ -27,16 +26,14 @@ export default async function WidgetSettingsPage({ params }: { params: { id: str
     : null;
 
   return (
-    <Suspense fallback={<div className="p-6 text-slate-500">Loading…</div>}>
-      <WidgetSettingsClient
-        projectId={params.id}
-        projectName={project?.name ?? "Project"}
-        clientId={project?.clientId ?? ""}
-        widgetConfig={widgetConfig}
-        apiUrl={apiUrl}
-        analytics={analytics}
-        trafficConfig={trafficConfig}
-      />
-    </Suspense>
+    <WidgetSettingsClient
+      projectId={params.id}
+      projectName={project?.name ?? "Project"}
+      clientId={project?.clientId ?? ""}
+      widgetConfig={widgetConfig}
+      apiUrl={apiUrl}
+      analytics={analytics}
+      trafficConfig={trafficConfig}
+    />
   );
 }
