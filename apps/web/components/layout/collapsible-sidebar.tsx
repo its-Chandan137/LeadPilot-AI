@@ -15,6 +15,12 @@ type CollapsibleSidebarProps = {
 export function CollapsibleSidebar({ children, collapsed, onToggle }: CollapsibleSidebarProps) {
   return (
     <SidebarContext.Provider value={{ collapsed }}>
+      {!collapsed && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 md:hidden"
+          onClick={onToggle}
+        />
+      )}
       <aside
         className={`fixed h-screen bg-white border-r border-[#E5E7EB] flex flex-col transition-all duration-200 z-30 ${
           collapsed ? "w-16" : "w-64"
