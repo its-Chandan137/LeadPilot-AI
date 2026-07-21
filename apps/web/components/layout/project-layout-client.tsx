@@ -30,7 +30,7 @@ export function ProjectLayoutClient({ children, workspaceName, userName, project
     });
   }
 
-  const marginLeft = collapsed ? "ml-16" : "ml-64";
+  const marginLeft = collapsed ? "ml-16" : "md:ml-64";
 
   return (
     <div className="flex min-h-screen bg-[#F5F3FF]">
