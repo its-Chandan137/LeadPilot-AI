@@ -42,7 +42,6 @@ type FusionTemplateProps = {
   scrollRef: RefObject<HTMLDivElement>;
 
   openWidget: () => void;
-
   closeWidget: () => void;
 
   footer: FusionFooterProps;
@@ -86,8 +85,8 @@ function fusionStyles(color: string, font: string) {
     @keyframes lp-fusion-rise { from { opacity: 0; transform: translateY(18px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
     @media (max-width: 520px) {
       .lp-fusion { bottom: 10px; }
-      .lp-fusion-panel { width: calc(100vw - 20px); height: min(620px, calc(100vh - 82px)); border-radius: 22px; }
-      .lp-fusion-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+      .lp-fusion-panel { width: calc(100vw - 40px);max-width: 360px; height: 500px; max-height: 70vh;
+ border-radius: 22px;}      .lp-fusion-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
     }
     .lp-fusion-poweredby { text-align: center; padding: 8px 12px 10px; font-size: 11px; color: #94a3b8; background: rgba(255,255,255,0.7); border-top: 1px solid rgba(148,163,184,0.16); flex-shrink: 0; }
   `;
@@ -186,6 +185,7 @@ export function FusionTemplate({
   config,
   status,
   openWidget,
+  
   closeWidget,
   messages,
   scrollRef,
@@ -207,7 +207,7 @@ export function FusionTemplate({
           <section aria-label="LeadPilot chat" className="lp-fusion-panel" role="dialog" aria-modal="true">
             <header className="lp-fusion-header">
               <div className="lp-fusion-identity">
-                <div className="lp-fusion-avatar" aria-hidden="true">
+                <div className="lp-fusion-avatar"   aria-hidden="true">
                   {config?.avatarUrl ? (
                     <img
                       src={config.avatarUrl}

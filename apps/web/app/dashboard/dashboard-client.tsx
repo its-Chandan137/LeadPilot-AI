@@ -111,46 +111,46 @@ export function DashboardClient({
 
   return (
     <>
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">Workspace</p>
-          <h1 className="mt-1 text-3xl font-semibold text-slate-950">{workspaceName}</h1>
+          <h1 className="mt-1 break-words text-2xl font-semibold text-slate-950 sm:text-3xl">{workspaceName}</h1>
         </div>
-        <Link className="rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" href="/projects">
+        <Link className="w-full rounded-md bg-slate-950 px-4 py-2 text-center text-sm font-medium text-white md:w-auto" href="/projects">
           View projects
         </Link>
       </div>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-5">
+      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {(Object.keys(statLabels) as (keyof Stats)[]).map((key) => (
           <Card key={key}>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-medium text-slate-500">{statLabels[key]}</CardTitle>
+            <CardHeader className="flex items-start justify-between gap-2 pb-2">
+              <CardTitle className="flex-1 text-sm font-medium leading-5 text-slate-500">{statLabels[key]}</CardTitle>
               {statIcons[key]}
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-semibold text-slate-950">{data.stats[key]}</p>
+              <p className="break-all text-2xl font-semibold text-slate-950 md:text-3xl">{data.stats[key]}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <div className="mt-8 grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle className="text-sm font-medium text-slate-500">Conversation Trend</CardTitle></CardHeader>
-          <CardContent>
+        <Card className="h-full">
+          <CardHeader><CardTitle className="pr-2 text-sm font-medium text-slate-500">Conversation Trend</CardTitle></CardHeader>
+          <CardContent className="p-4 sm:p-6">
             {data.conversationTrend.every((p) => p.count === 0) ? (
               <p className="text-sm text-slate-400 text-center py-8">No conversations yet.</p>
             ) : (
-              <div className="flex items-end gap-1.5 h-32">
+              <div className="flex items-end gap-1 h-40">
                 {data.conversationTrend.map((p) => (
                   <div key={p.date} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[10px] text-slate-500">{p.count}</span>
+                    <span className="text-[9px] text-slate-500 sm:text-[10px]">{p.count}</span>
                     <div
                       className="w-full rounded-t bg-[#7C3AED] transition-all"
                       style={{ height: `${Math.max((p.count / maxConversation) * 100, p.count > 0 ? 4 : 0)}%` }}
                     />
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[9px] text-slate-400 sm:text-[10px]">
                       {new Date(p.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" })}
                     </span>
                   </div>
@@ -160,21 +160,21 @@ export function DashboardClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="h-full">
           <CardHeader><CardTitle className="text-sm font-medium text-slate-500">Lead Trend</CardTitle></CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             {data.leadTrend.every((p) => p.count === 0) ? (
               <p className="text-sm text-slate-400 text-center py-8">No leads yet.</p>
             ) : (
-              <div className="flex items-end gap-1.5 h-32">
+              <div className="flex items-end gap-1.5 h-40">
                 {data.leadTrend.map((p) => (
                   <div key={p.date} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[10px] text-slate-500">{p.count}</span>
+                    <span className="text-[9px] sm:text-[10px] text-slate-500">{p.count}</span>
                     <div
                       className="w-full rounded-t bg-[#7C3AED] transition-all"
                       style={{ height: `${Math.max((p.count / maxLead) * 100, p.count > 0 ? 4 : 0)}%` }}
                     />
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[9px] sm:text-[10px] text-slate-400">
                       {new Date(p.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" })}
                     </span>
                   </div>
@@ -185,8 +185,8 @@ export function DashboardClient({
         </Card>
       </div>
 
-      <div className="mt-8 grid gap-6 md:grid-cols-3">
-        <Card>
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="h-full">
           <CardHeader><CardTitle className="text-sm font-medium text-slate-500">Recent Conversations</CardTitle></CardHeader>
           <CardContent className="p-0">
             {data.recentConversations.length === 0 ? (
@@ -197,7 +197,7 @@ export function DashboardClient({
                   <Link
                     key={c.id}
                     href={`/projects`}
-                    className="flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors group"
+                    className="group flex items-center justify-between px-4 py-3 transition-colors hover:bg-slate-50 sm:px-6"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-slate-950 truncate">
@@ -219,7 +219,7 @@ export function DashboardClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="h-full">
           <CardHeader><CardTitle className="text-sm font-medium text-slate-500">Recent Leads</CardTitle></CardHeader>
           <CardContent className="p-0">
             {data.recentLeads.length === 0 ? (
@@ -227,10 +227,10 @@ export function DashboardClient({
             ) : (
               <div className="divide-y divide-slate-100">
                 {data.recentLeads.map((l) => (
-                  <div key={l.id} className="px-6 py-3">
+                  <div key={l.id} className="px-4 py-3 sm:px-6">
                     <p className="text-sm font-medium text-slate-950 truncate">{l.name ?? "Unnamed"}</p>
                     <p className="text-xs text-slate-500 truncate">{l.email ?? "No email"}</p>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
                       <span className="text-xs text-[#7C3AED] truncate">{l.projectName}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
                         {l.status}
@@ -246,7 +246,7 @@ export function DashboardClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="h-full">
           <CardHeader><CardTitle className="text-sm font-medium text-slate-500">Recent Activity</CardTitle></CardHeader>
           <CardContent className="p-0">
             {data.recentActivity.length === 0 ? (
@@ -254,7 +254,7 @@ export function DashboardClient({
             ) : (
               <div className="divide-y divide-slate-100">
                 {data.recentActivity.map((a) => (
-                  <div key={`${a.type}-${a.id}`} className="px-6 py-3 flex items-start gap-3">
+                  <div key={`${a.type}-${a.id}`} className="flex items-start gap-3 px-4 py-3 sm:px-6">
                     <div className={`mt-0.5 w-6 h-6 rounded-full grid place-items-center shrink-0 ${
                       a.type === "conversation" ? "bg-blue-100" :
                       a.type === "lead" ? "bg-green-100" : "bg-purple-100"
@@ -269,7 +269,7 @@ export function DashboardClient({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-slate-950 truncate">{a.title}</p>
-                      <p className="text-xs text-[#7C3AED]">{a.projectName}</p>
+                      <p className="truncate text-xs text-[#7C3AED]">{a.projectName}</p>
                       <p className="text-[10px] text-slate-400 mt-0.5">
                         {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}
                       </p>
