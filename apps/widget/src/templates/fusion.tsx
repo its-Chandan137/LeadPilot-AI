@@ -35,14 +35,13 @@ type FusionTemplateProps = {
 
   config: WidgetConfig;
 
-  status: "collapsed" | "open" | "loading" | "error" | "minimized";
+  status: "collapsed" | "open" | "loading" | "error";
 
   messages: ReactNode;
 
   scrollRef: RefObject<HTMLDivElement>;
 
   openWidget: () => void;
-  minimizeWidget: () => void;
   closeWidget: () => void;
 
   footer: FusionFooterProps;
@@ -186,7 +185,7 @@ export function FusionTemplate({
   config,
   status,
   openWidget,
-  minimizeWidget,
+  
   closeWidget,
   messages,
   scrollRef,
@@ -203,10 +202,6 @@ export function FusionTemplate({
               <path d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
             </svg>
             <span className="lp-fusion-placeholder">Ask LeadPilot AI...</span>
-          </button>
-        ) : status === "minimized" ? (
-          <button className="lp-fusion-launcher lp-fusion-placeholder" onClick={openWidget}>
-            💬 Continue Chat...
           </button>
         ) : (
           <section aria-label="LeadPilot chat" className="lp-fusion-panel" role="dialog" aria-modal="true">
@@ -231,33 +226,11 @@ export function FusionTemplate({
                   </p>
                 </div>
               </div>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <button
-                      aria-label="Minimize chat"
-                      className="lp-fusion-close"
-                      onClick={minimizeWidget}
-                      type="button"
-                    >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                      >
-                        <path
-                          d="M3 8h10"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    </button>
               <button aria-label="Close chat" className="lp-fusion-close" onClick={closeWidget} type="button">
                 <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 16 16" width="16">
                   <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
                 </svg>
               </button>
-              </div>
             </header>
             <div className="lp-messages" ref={scrollRef} role="log" aria-label="Chat messages" aria-live="polite">
               {messages}
