@@ -16,7 +16,8 @@ export const dynamic = "force-dynamic";
 const bodySchema = z.object({
   projectId: z.string().min(1),
   conversationId: z.string().min(1),
-  message: z.string().trim().min(1).max(2000)
+  message: z.string().trim().min(1).max(2000),
+  skipRagRefresh: z.boolean().optional().default(false),
 });
 
 export async function OPTIONS() {
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
       return fail("Invalid voice turn payload");
     }
 
-    const { projectId, conversationId, message } = parsed.data;
+    const { projectId, conversationId, message, skipRagRefresh } = parsed.data;
     const prisma = getSharedPrismaClient();
 
     const project = await prisma.project.findUnique({
@@ -67,7 +68,8 @@ export async function POST(request: Request) {
       history,
       memory,
       widgetConfig: project.widgetConfig,
-      modelProvider: "openai"
+      modelProvider: "openai",
+      skipRagRefresh,
     });
 
     const configuredObjectives = getConfiguredObjectives(project.widgetConfig);

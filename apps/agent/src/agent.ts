@@ -219,8 +219,16 @@ class LeadPilotLLMStream extends llm.LLMStream {
             abortCtrl.signal
           );
           console.log('[VOICE] Response received. Reply:', JSON.stringify(reply));
-          if (reply) spoken = reply;
-          else spoken = "I heard you, but my brain is temporarily unavailable. Please try again in a moment.";
+          if (reply) {
+            spoken = reply;
+          } else if (bargeInRequested) {
+            // Aborted due to barge-in — stay completely silent
+            console.log('[BARGE-IN] turn aborted — staying silent');
+            return;
+          } else {
+            // Genuine failure (not a barge-in) — speak the fallback
+            spoken = "I heard you, but my brain is temporarily unavailable. Please try again in a moment.";
+          }
         } else {
           console.log('[VOICE] No user text/projectId — using fallback');
         }
@@ -401,19 +409,22 @@ export default defineAgent({
     // audio AND abort in-flight TTS synthesis. This is the barge-in: user
     // speech interrupts the agent's reply mid-sentence.
     session.on(voice.AgentSessionEventTypes.UserStateChanged, (ev: any) => {
-      const state = ev.state ?? ev.newState ?? ev?.oldState ?? '';
-      const stateStr = typeof state === 'string' ? state : JSON.stringify(ev);
+      const rawState = ev.state ?? ev.newState ?? ev;
+      const stateStr = typeof rawState === 'string' ? rawState : JSON.stringify(rawState);
       console.log('[VOICE] UserStateChanged:', stateStr);
 
       if (stateStr === 'speaking') {
+        // User started talking — set flag to abort ongoing TTS synthesis
         bargeInRequested = true;
+        console.log('[BARGE-IN] user speaking — aborting TTS');
+
+        // Signal widget to stop playing current audio immediately
         try {
           const stopMsg = new TextEncoder().encode(JSON.stringify({ stop: true }));
           ctx.room.localParticipant.publishData(stopMsg, {
             reliable: true,
             topic: 'agent-audio-control',
           }).catch((e: any) => console.log('[BARGE-IN] publishData ERR', e?.message));
-          console.log('[BARGE-IN] stop signal sent to widget');
         } catch (e: any) {
           console.log('[BARGE-IN] encode ERR', e?.message);
         }
@@ -441,6 +452,7 @@ export default defineAgent({
     // one utterance into a single AudioBuffer and plays it ONCE. This avoids the
     // garbled "multiple fast voices" caused by playing many tiny WAV clips.
     async function publishWav(text: string): Promise<void> {
+      bargeInRequested = false; // new utterance starting — reset barge-in
       (publishWav as any)._last ??= '';
       (publishWav as any)._ts ??= 0;
       const t = (text || '').trim();
@@ -449,7 +461,6 @@ export default defineAgent({
       if ((publishWav as any)._last === t && now - ((publishWav as any)._ts || 0) < 1500) return;
       (publishWav as any)._last = t;
       (publishWav as any)._ts = now;
-      bargeInRequested = false; // reset at start of each new utterance
 
       try {
         const sr = 24000;
@@ -464,9 +475,16 @@ export default defineAgent({
         let totalSamples = 0;
 
         for await (const item of fallbackTts.synthesize(t)) {
-          // User started speaking — abort synthesis immediately
           if (bargeInRequested) {
-            console.log('[BARGE-IN] synthesis aborted mid-stream');
+            console.log('[BARGE-IN] synthesis aborted');
+            // Send zero-sample last chunk so widget resets sequence state
+            const buf = new ArrayBuffer(6);
+            const dv = new DataView(buf);
+            dv.setUint8(0, 0x01); dv.setUint16(1, 0, false);
+            dv.setUint8(3, 1); dv.setUint8(4, 1); dv.setUint8(5, 0);
+            await ctx.room.localParticipant.publishData(
+              new Uint8Array(buf), { reliable: true, topic: 'agent-audio' }
+            ).catch(() => {});
             return;
           }
           const frame: any = item && item.frame ? item.frame : item;
@@ -488,7 +506,19 @@ export default defineAgent({
         let seq = 0;
         while (sent < totalSamples) {
           if (bargeInRequested) {
-            console.log('[BARGE-IN] chunk publishing aborted');
+            console.log('[BARGE-IN] chunk publishing aborted at seq', seq);
+            // Send a last-flag chunk with zero samples so widget resets state cleanly
+            const buf = new ArrayBuffer(6);
+            const dv = new DataView(buf);
+            dv.setUint8(0, 0x01);
+            dv.setUint16(1, seq, false);
+            dv.setUint8(3, 1); // last flag
+            dv.setUint8(4, ch);
+            dv.setUint8(5, 0);
+            await ctx.room.localParticipant.publishData(
+              new Uint8Array(buf),
+              { reliable: true, topic: 'agent-audio' }
+            ).catch(() => {});
             return;
           }
           const n = Math.min(samplesPerChunk, totalSamples - sent);

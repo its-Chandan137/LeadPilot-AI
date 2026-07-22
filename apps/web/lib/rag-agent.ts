@@ -17,6 +17,12 @@ import { runAIOS } from "@/lib/ai-os";
 import { persistConversation } from "@/lib/intelligence-store";
 import { logger } from "@/lib/logger";
 
+// Per-project RAG chunk cache for voice sessions.
+// First turn embeds + retrieves; subsequent turns reuse cached chunks.
+// Cache entries expire after 10 minutes of inactivity.
+const ragChunkCache = new Map<string, { chunks: string[]; ts: number }>();
+const RAG_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
 /**
  * Shared "AI brain" for LeadPilot.
  *
@@ -50,6 +56,12 @@ export interface RagAgentInput {
    * widget keeps using Groq.
    */
   modelProvider?: "groq" | "openai";
+  /**
+   * If true, reuse cached RAG chunks instead of re-embedding the query.
+   * Voice turns use this — only the first turn hits Gemini; subsequent
+   * turns in the same conversation skip the ~500-2000ms embedding call.
+   */
+  skipRagRefresh?: boolean;
 }
 
 export interface RagAgentResult extends AIConversationResponse {
@@ -315,13 +327,28 @@ ${buildStructuredResponseInstruction()}`;
  * (and attached intelligence) for the caller to transport back to the visitor.
  */
 export async function runRagAgent(input: RagAgentInput): Promise<RagAgentResult> {
-  const { conversationId, projectId, projectName, message, history, widgetConfig } = input;
+  const { conversationId, projectId, projectName, message, history, widgetConfig, skipRagRefresh } = input;
 
   // Memory is loaded by the caller (so both channels share the same store) and
   // updated here after the model responds.
   const memory = input.memory;
 
-  const chunks = await retrieveRelevantChunks(projectId, message);
+  // Use cached chunks if skipRagRefresh is set AND cache is still fresh.
+  // This eliminates the Gemini embedding call on every voice turn (~500-2000ms saved).
+  let chunks: string[];
+  const cacheKey = input.projectId;
+  const cached = ragChunkCache.get(cacheKey);
+  const now = Date.now();
+
+  if (skipRagRefresh && cached && now - cached.ts < RAG_CACHE_TTL_MS) {
+    chunks = cached.chunks;
+    logger.warn(`[RAG] Using cached chunks for project ${input.projectId} (${chunks.length} chunks)`);
+  } else {
+    chunks = await retrieveRelevantChunks(input.projectId, input.message);
+    // Cache for subsequent voice turns
+    ragChunkCache.set(cacheKey, { chunks, ts: now });
+    logger.warn(`[RAG] Retrieved ${chunks.length} fresh chunks for project ${input.projectId}`);
+  }
 
   if (chunks.length === 0) {
     return {
