@@ -46,6 +46,8 @@ export async function POST(request: Request) {
 
     const roomName = `voice-${project.id}-${visitorId}-${Date.now()}`;
 
+    console.log(`[DISPATCH] ROOM CREATED: ${roomName} projectId=${project.id} visitorId=${visitorId}`);
+
     const voiceConversation = await prisma.voiceConversation.create({
       data: {
         projectId: project.id,
@@ -76,7 +78,7 @@ export async function POST(request: Request) {
     });
 
     const jwt = await token.toJwt();
-    console.log(typeof jwt, jwt.substring(0, 20));
+    console.log(`[DISPATCH] TOKEN CREATED for room ${roomName} (len ${jwt.length})`);
 
     try {
       const dispatchClient = new AgentDispatchClient(
@@ -84,14 +86,15 @@ export async function POST(request: Request) {
         process.env.LIVEKIT_API_KEY!,
         process.env.LIVEKIT_API_SECRET!
       );
-      await dispatchClient.createDispatch(roomName, "leadpilot-agent", {
+      console.log(`[DISPATCH] DISPATCH REQUEST: room=${roomName} agentName=leadpilot-agent`);
+      const dispatch = await dispatchClient.createDispatch(roomName, "leadpilot-agent", {
         metadata: JSON.stringify({
           projectId: project.id,
           visitorId,
           voiceConversationId: voiceConversation.id,
         }),
       });
-      console.log(`[Voice] Dispatched agent "leadpilot-agent" to room: ${roomName}`);
+      console.log(`[DISPATCH] DISPATCH RESPONSE: dispatchId=${dispatch.id} state=${JSON.stringify(dispatch.state)}`);
     } catch (dispatchErr) {
       console.error(
         `[Voice] CRITICAL: Failed to dispatch agent "leadpilot-agent" to room ${roomName}. ` +

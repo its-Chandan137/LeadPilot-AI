@@ -250,6 +250,97 @@ export async function getConversationHistory(
   }));
 }
 
+/**
+ * Channel-agnostic history loader + writer.
+ *
+ * Chat persists to the `Message` table; Voice persists to the `VoiceMessage`
+ * table. Both channels share the SAME conversation-memory store and the SAME
+ * AI brain, so the only difference is which transcript table backs a given
+ * conversation. These helpers let the voice endpoint reuse the exact same
+ * history semantics as chat without duplicating the logic.
+ */
+export type ConversationChannel = "chat" | "voice";
+
+export async function getChannelHistory(
+  conversationId: string,
+  channel: ConversationChannel,
+  limit = CONVERSATION_HISTORY_LIMIT
+): Promise<HistoryMessage[]> {
+  if (channel === "chat") {
+    return getConversationHistory(conversationId, limit);
+  }
+
+  const prisma = getPrisma();
+  if (!prisma) {
+    const turns = memoryMessages.get(conversationId) ?? [];
+    return turns.slice(-limit);
+  }
+
+  const messages = await prisma.voiceMessage.findMany({
+    where: { voiceConversationId: conversationId },
+    orderBy: { createdAt: "asc" },
+    take: limit,
+    select: { role: true, content: true }
+  });
+
+  return messages.map((m) => ({
+    role: m.role === "ASSISTANT" ? "assistant" : "user",
+    content: m.content
+  }));
+}
+
+/**
+ * Persists a user/assistant turn for the given channel. Returns false if the
+ * conversation does not exist (or, in no-database mode, is not a local id).
+ */
+export async function saveChannelTurn(input: {
+  conversationId: string;
+  channel: ConversationChannel;
+  message: string;
+  reply: string;
+}): Promise<boolean> {
+  if (input.channel === "chat") {
+    return saveChatTurn({
+      clientId: "",
+      visitorId: "",
+      conversationId: input.conversationId,
+      message: input.message,
+      reply: input.reply
+    });
+  }
+
+  const prisma = getPrisma();
+  if (!prisma) {
+    recordMemoryTurn(input.conversationId, input.message, input.reply);
+    return true;
+  }
+
+  const conversation = await prisma.voiceConversation.findUnique({
+    where: { id: input.conversationId },
+    select: { id: true }
+  });
+  if (!conversation) return false;
+
+  await prisma.$transaction([
+    prisma.voiceMessage.create({
+      data: {
+        voiceConversationId: input.conversationId,
+        role: "USER",
+        content: input.message
+      }
+    }),
+    prisma.voiceMessage.create({
+      data: {
+        voiceConversationId: input.conversationId,
+        role: "ASSISTANT",
+        content: input.reply
+      }
+    })
+  ]);
+
+  return true;
+}
+
 export async function createProject(input: {
   workspaceId: string;
   name: string;
