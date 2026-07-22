@@ -283,6 +283,9 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
   const [room, setRoom] = useState<Room | null>(null);
   // Live voice transcript (user speech + AI reply), shown word-by-word during a call.
   const [liveTranscript, setLiveTranscript] = useState<{ role: "user" | "assistant"; text: string; final: boolean }[]>([]);
+  // Track the currently playing audio source so we can interrupt it if a new
+  // utterance arrives before the previous one finishes, or on call end.
+  let currentAudioSource: AudioBufferSourceNode | null = null;
 
   const visitorId = useMemo(createVisitorId, []);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -624,17 +627,21 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
       // and played ONCE — no per-chunk WAV seams, no overlapping "fast voices".
       // AudioContext is shared + unlocked in startVoiceCall (user gesture).
       const SR = 24000;
-      let pending: Int16Array[] = [];
+
       const playBuffer = (pcm: Int16Array) => {
-        // A zero-length buffer is invalid and throws "error from the audio
-        // device" on ctx.start(). Guard against it.
         if (!pcm || pcm.length === 0) {
-          console.warn("[DATACH] skipping empty utterance");
+          console.warn('[DATACH] skipping empty utterance');
           return;
         }
         const ctx = getAudioCtx();
         const play = () => {
           try {
+            // Stop any currently playing audio immediately
+            if (currentAudioSource) {
+              try { currentAudioSource.stop(); } catch {}
+              currentAudioSource.disconnect();
+              currentAudioSource = null;
+            }
             const buf = ctx.createBuffer(1, pcm.length, SR);
             const f32 = new Float32Array(pcm.length);
             for (let i = 0; i < pcm.length; i++) f32[i] = pcm[i] / 32768;
@@ -642,25 +649,33 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
             const src = ctx.createBufferSource();
             src.buffer = buf;
             src.connect(ctx.destination);
-            src.onended = null;
+            src.onended = () => { currentAudioSource = null; };
             src.start();
-            console.log("[DATACH] played utterance", { samples: pcm.length, durMs: Math.round((pcm.length / SR) * 1000) });
+            currentAudioSource = src;
+            console.log('[DATACH] played utterance', {
+              samples: pcm.length,
+              durMs: Math.round((pcm.length / SR) * 1000),
+            });
           } catch (e) {
-            console.error("[DATACH] playBuffer error:", e);
+            console.error('[DATACH] playBuffer error:', e);
           }
         };
-        // The AudioContext must be running before we start a source; resume is
-        // async, so wait for it (and retry) to avoid the WebAudio device error.
-        if (ctx.state === "suspended") {
-          ctx.resume().then(play).catch((e) => console.error("[DATACH] resume error:", e));
+        if (ctx.state === 'suspended') {
+          ctx.resume().then(play).catch((e) => console.error('[DATACH] resume error:', e));
         } else {
           play();
         }
       };
+
+      // Per-utterance state for sequence validation
+      let pending: Int16Array[] = [];
+      let expectedSeq = 0;
+      let utteranceAborted = false;
+
       newRoom.on(RoomEvent.DataReceived, (payload: any, participant: any, kind?: any, topic?: string) => {
-        const t = topic ?? payload?.topic ?? "";
+        const t = topic ?? payload?.topic ?? '';
         // Live transcript (user speech + AI reply) streamed as JSON text.
-        if (t === "agent-transcript") {
+        if (t === 'agent-transcript') {
           try {
             const raw: Uint8Array =
               payload instanceof Uint8Array ? payload :
@@ -671,7 +686,6 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
             setLiveTranscript((prev) => {
               const next = [...prev];
               if (msg.final) {
-                // Replace any pending (non-final) line of the same role with the final one.
                 const idx = next.findIndex((l) => l.role === msg.role && !l.final);
                 if (idx >= 0) next[idx] = { role: msg.role, text: msg.text, final: true };
                 else next.push({ role: msg.role, text: msg.text, final: true });
@@ -683,35 +697,89 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
               return next;
             });
           } catch (e) {
-            console.error("[TRANSCRIPT] parse error:", e);
+            console.error('[TRANSCRIPT] parse error:', e);
           }
           return;
         }
-        if (t !== "agent-audio") return;
+        if (t === 'agent-audio-control') {
+          try {
+            const raw: Uint8Array =
+              payload instanceof Uint8Array ? payload :
+              payload?.data instanceof Uint8Array ? payload.data :
+              new Uint8Array(payload);
+            const msg = JSON.parse(new TextDecoder().decode(raw)) as { stop?: boolean };
+            if (msg?.stop) {
+              if (currentAudioSource) {
+                try { currentAudioSource.stop(); } catch {}
+                currentAudioSource.disconnect();
+                currentAudioSource = null;
+              }
+              pending = [];
+              expectedSeq = 0;
+              utteranceAborted = true;
+              console.log('[BARGE-IN] audio stopped by agent signal');
+            }
+          } catch (e) {
+            console.error('[BARGE-IN] parse error:', e);
+          }
+          return;
+        }
+        if (t !== 'agent-audio') return;
+
         try {
           const bytes: Uint8Array =
             payload instanceof Uint8Array ? payload :
             payload?.data instanceof Uint8Array ? payload.data :
             new Uint8Array(payload);
+
           if (bytes.length < 6 || bytes[0] !== 0x01) return;
-          const last = bytes[3] === 1;
-          // Copy PCM bytes into a fresh, correctly 2-byte-aligned Int16Array.
+
+          const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+          const seq = dv.getUint16(1, false);
+          const isLast = bytes[3] === 1;
+
+          // Sequence gap detected — abort this utterance, wait for next
+          if (seq === 0) {
+            // New utterance starting — reset state
+            pending = [];
+            expectedSeq = 0;
+            utteranceAborted = false;
+          } else if (seq !== expectedSeq) {
+            console.warn('[DATACH] sequence gap: expected', expectedSeq, 'got', seq, '— aborting utterance');
+            utteranceAborted = true;
+          }
+
+          if (utteranceAborted) {
+            if (isLast) {
+              pending = [];
+              expectedSeq = 0;
+              utteranceAborted = false;
+            }
+            return;
+          }
+
+          expectedSeq = seq + 1;
+
           const pcmBytes = bytes.subarray(6);
           const count = Math.floor(pcmBytes.length / 2);
           const pcm = new Int16Array(count);
-          const dv = new DataView(pcmBytes.buffer, pcmBytes.byteOffset, count * 2);
-          for (let i = 0; i < count; i++) pcm[i] = dv.getInt16(i * 2, true);
+          const pcmDv = new DataView(pcmBytes.buffer, pcmBytes.byteOffset, count * 2);
+          for (let i = 0; i < count; i++) pcm[i] = pcmDv.getInt16(i * 2, true);
           pending.push(pcm);
-          if (!last) return;
-          // Concatenate all chunks into one continuous buffer and play once.
+
+          if (!isLast) return;
+
+          // All chunks received in order — concatenate and play
           const total = pending.reduce((n, p) => n + p.length, 0);
+          if (total === 0) { pending = []; expectedSeq = 0; return; }
           const full = new Int16Array(total);
           let off = 0;
           for (const p of pending) { full.set(p, off); off += p.length; }
           pending = [];
+          expectedSeq = 0;
           playBuffer(full);
         } catch (e) {
-          console.error("[DATACH] play error:", e);
+          console.error('[DATACH] play error:', e);
         }
       });
 
@@ -741,6 +809,11 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
   async function endVoiceCall() {
     if (!room || voiceState !== "active") return;
     setVoiceState("ending");
+    // Stop any playing audio immediately when call ends
+    if (typeof currentAudioSource !== 'undefined' && currentAudioSource) {
+      try { currentAudioSource.stop(); } catch {}
+      currentAudioSource = null;
+    }
     await room.disconnect();
     setRoom(null);
     setVoiceState("idle");

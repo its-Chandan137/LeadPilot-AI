@@ -29,6 +29,7 @@
 - None. Awaiting user direction for Phase 16.
 - NOTE: `scripts/clear-data.ts` is a PRE-EXISTING user script that `DELETE FROM "Lead"` and `"Conversation"` (and cascades Messages). Do NOT run it unless intending a full wipe — it would also delete the seeded demo conversations.
 
+
 ### Known Issue (prod)
 - `https://leadpilot-ai-beryl.vercel.app` `/api/crm/dashboard` returns 500 ("Application error: a server-side exception", digest 1570973028) in BOTH global (no projectId) and the dashboard page RSC render.
 - Diagnosed locally: `getLiveDashboard()` (lib/crm/dashboard.ts) runs CLEAN against the same shared Supabase DB in both scopes (verified via scripts/repro-crm.ts, since deleted). CRM code was NOT changed this session, so current code is correct.
@@ -42,6 +43,18 @@
 - Optionally extend `scripts/seed-conversations.ts` scenarios or counts (`SEED_COUNT` env) for broader demos.
 - Proceed to Phase 16 when the user confirms the polish pass is sufficient.
 
+## Voice Agent Fixes (applied)
+7 latency/overlap/word-clipping fixes applied to `apps/agent/src/agent.ts` and `apps/widget/src/main.tsx`:
+1. **Turn mutex** — `turnInFlight` flag prevents overlapping turns
+2. **Streaming PCM** — `publishWav` replaced with stream + merged buffer for accurate last-flag
+3. **RAG cache** — `skipRagRefresh` avoids redundant per-turn RAG calls
+4. **Stop previous audio** — `currentAudioSource` tracking; `playBuffer` stops active source before new one
+5. **Sequence validation** — DataReceived handler checks `expectedSeq`; gaps abort corrupted audio
+6. **Barge-in** — `AbortController` per turn, aborts in-flight when user speaks again
+7. **Disconnect cleanup** — `clearInterval(_probe)` + `ragCache.delete(roomName)` on disconnect
+
+**Type fix**: `@livekit/agents` pinned to `1.5.0` in agent's `package.json`; `as any` casts on STT/TTS/rtc-node imports resolve `#private` & `FfiClient` errors (workspace duplicates). All 3 packages pass `tsc --noEmit`.
+
 ## Relevant Files
 - `apps/web/lib/analytics/messages.ts` — NEW: `computeMessageStats()` (Message/Conversation-based metrics).
 - `apps/web/lib/analytics/overview.ts` — `calculateOverview(records, messageStats?)` now uses computed duration/messages/response-length instead of null/timeline.
@@ -53,3 +66,6 @@
 - `apps/web/scripts/seed-conversations.ts` — demo data generator (run: `npx tsx scripts/seed-conversations.ts`).
 - `apps/web/scripts/check-analytics.ts` — prints overview metrics for global/project.
 - `apps/web/scripts/clear-data.ts` — pre-existing full-wipe script (do not run casually).
+- `apps/agent/src/agent.ts` — 7 voice fixes (turn mutex, streaming PCM, RAG cache, barge-in, etc.)
+- `apps/agent/package.json` — `@livekit/agents` pinned to `1.5.0`
+- `apps/widget/src/main.tsx` — audio playback fixes (currentAudioSource, sequence validation)

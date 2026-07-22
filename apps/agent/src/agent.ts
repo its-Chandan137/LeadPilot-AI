@@ -15,6 +15,19 @@ let replySpeaker: ((text: string) => Promise<void>) | null = null;
 // Module-level handle so the LeadPilotLLMStream constructor (separate class
 // scope) can publish transcripts over the data channel.
 let publishTranscriptFn: ((role: 'user' | 'assistant', text: string, final: boolean) => void) | null = null;
+// Prevents concurrent turns from firing simultaneous TTS + publishWav calls.
+// If a turn is already in flight, new ones are dropped until it completes.
+let turnInFlight = false;
+// Per-room RAG cache: after the first turn warms the pipeline, subsequent
+// turns reuse the cached context. Cleared on room disconnect.
+const ragCache = new Map<string, string>();
+// AbortController for the in-flight turn so in-flight HTTP requests to
+// agent-turn can be cancelled when the user starts speaking again (barge-in).
+let currentTurnAbort: AbortController | null = null;
+// Set to true when user barges in — publishWav checks this and aborts
+// synthesis early instead of finishing a reply that will be immediately
+// discarded.
+let bargeInRequested = false;
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -78,21 +91,34 @@ async function getProjectConfig(roomName: string) {
 async function getAgentTurn(
   projectId: string,
   conversationId: string,
-  message: string
+  message: string,
+  roomName: string,
+  signal?: AbortSignal
 ): Promise<string> {
   try {
     const res = await fetch(`${LEADPILOT_API_URL}/api/voice/agent-turn`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectId, conversationId, message }),
+      body: JSON.stringify({
+        projectId,
+        conversationId,
+        message,
+        skipRagRefresh: ragCache.has(roomName),
+      }),
+      signal,
     });
     const contentType = res.headers.get('content-type') ?? '';
     if (!res.ok || !contentType.includes('application/json')) {
       return '';
     }
     const data = (await res.json()) as { success: boolean; data?: { reply: string } };
+    ragCache.set(roomName, 'warm');
     return data.data?.reply ?? '';
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      console.log('[VOICE] Turn aborted — user started speaking');
+      return '';
+    }
     console.error('[Agent] getAgentTurn failed:', err);
     return '';
   }
@@ -128,6 +154,7 @@ async function saveTranscript(
 class LeadPilotLLM extends llm.LLM {
   projectId: string | null = null;
   conversationId: string | null = null;
+  roomName: string | null = null;
 
   label(): string {
     return 'leadpilot';
@@ -162,6 +189,18 @@ class LeadPilotLLMStream extends llm.LLMStream {
     // the reply (text + audio) is delivered, compute it eagerly here and push it
     // straight onto the output queue that the framework iterates (for await).
     (async () => {
+      if (turnInFlight) {
+        // Abort the previous turn if user speaks again (barge-in)
+        if (currentTurnAbort) {
+          currentTurnAbort.abort();
+          currentTurnAbort = null;
+        }
+        turnInFlight = false; // allow new turn to proceed
+      }
+      turnInFlight = true;
+      bargeInRequested = false; // new turn starting — clear any previous barge-in
+      const abortCtrl = new AbortController();
+      currentTurnAbort = abortCtrl;
       try {
         const lastUser = [...(opts.chatCtx?.items ?? [])]
           .reverse()
@@ -172,7 +211,13 @@ class LeadPilotLLMStream extends llm.LLMStream {
         let spoken = "Sorry, I didn't catch that.";
         if (text && this.#llm.projectId) {
           console.log('[VOICE] Calling /api/voice/agent-turn with:', JSON.stringify({ projectId: this.#llm.projectId, conversationId: this.#llm.conversationId, message: text }));
-          const reply = await getAgentTurn(this.#llm.projectId, this.#llm.conversationId ?? '', text);
+          const reply = await getAgentTurn(
+            this.#llm.projectId,
+            this.#llm.conversationId ?? '',
+            text,
+            this.#llm.roomName ?? '',
+            abortCtrl.signal
+          );
           console.log('[VOICE] Response received. Reply:', JSON.stringify(reply));
           if (reply) spoken = reply;
           else spoken = "I heard you, but my brain is temporarily unavailable. Please try again in a moment.";
@@ -190,6 +235,9 @@ class LeadPilotLLMStream extends llm.LLMStream {
         }
       } catch (e: any) {
         console.log('[VOICE] LLMStream reply THREW:', e && e.message);
+      } finally {
+        turnInFlight = false;
+        currentTurnAbort = null;
       }
     })();
   }
@@ -304,6 +352,7 @@ export default defineAgent({
     const leadpilotLLM = new LeadPilotLLM();
     leadpilotLLM.projectId = resolvedProjectId;
     leadpilotLLM.conversationId = conversationId;
+    leadpilotLLM.roomName = roomName;
 
     // VAD loaded once (module singleton / prewarm). OpenAI's STT
     // (gpt-realtime-whisper) requires the SAME VAD instance passed directly to
@@ -322,8 +371,8 @@ export default defineAgent({
 
     const session = new voice.AgentSession({
       // STT/TTS stay voice-specific (OpenAI). The LLM is the shared LeadPilot brain.
-      stt: new openai.STT({ vad }),
-      tts,
+      stt: new openai.STT({ vad }) as any,
+      tts: tts as any,
       llm: leadpilotLLM,
       // VAD required by OpenAI's STT (gpt-realtime-whisper) for end-of-speech
       // audio commits. Loaded once in prewarm.
@@ -335,7 +384,7 @@ export default defineAgent({
       // Disable preemptive generation: without it LiveKit generates a (wasted,
       // interruptible) reply on the interim transcript AND again on the final
       // one — causing a doubled/overlapping reply and 2x latency.
-      preemptiveGeneration: { enabled: false },
+      preemptiveGeneration: false,
     });
 
     // Listen for user transcription for live logging
@@ -348,8 +397,27 @@ export default defineAgent({
     });
 
     // User state (speaking/listening) — surfaced by VAD/turn detection.
+    // When user starts speaking, immediately signal widget to stop current
+    // audio AND abort in-flight TTS synthesis. This is the barge-in: user
+    // speech interrupts the agent's reply mid-sentence.
     session.on(voice.AgentSessionEventTypes.UserStateChanged, (ev: any) => {
-      console.log('[VOICE] UserStateChanged:', ev.state ?? JSON.stringify(ev));
+      const state = ev.state ?? ev.newState ?? ev?.oldState ?? '';
+      const stateStr = typeof state === 'string' ? state : JSON.stringify(ev);
+      console.log('[VOICE] UserStateChanged:', stateStr);
+
+      if (stateStr === 'speaking') {
+        bargeInRequested = true;
+        try {
+          const stopMsg = new TextEncoder().encode(JSON.stringify({ stop: true }));
+          ctx.room.localParticipant.publishData(stopMsg, {
+            reliable: true,
+            topic: 'agent-audio-control',
+          }).catch((e: any) => console.log('[BARGE-IN] publishData ERR', e?.message));
+          console.log('[BARGE-IN] stop signal sent to widget');
+        } catch (e: any) {
+          console.log('[BARGE-IN] encode ERR', e?.message);
+        }
+      }
     });
 
     // EOT prediction from VAD/turn detection.
@@ -377,20 +445,30 @@ export default defineAgent({
       (publishWav as any)._ts ??= 0;
       const t = (text || '').trim();
       if (!t) return;
-      // De-dup guard: skip if the exact same text was published within 1.5s
-      // (LiveKit can still invoke the reply path twice despite preemptive off).
       const now = Date.now();
-      if (publishWav._last === t && now - (publishWav._ts || 0) < 1500) return;
-      publishWav._last = t;
-      publishWav._ts = now;
+      if ((publishWav as any)._last === t && now - ((publishWav as any)._ts || 0) < 1500) return;
+      (publishWav as any)._last = t;
+      (publishWav as any)._ts = now;
+      bargeInRequested = false; // reset at start of each new utterance
+
       try {
         const sr = 24000;
         const ch = 1;
         const blockAlign = ch * 2;
-        // 1) Collect all frames from the TTS stream into one Int16Array.
+        const MAX_PAYLOAD = 14000;
+        const samplesPerChunk = Math.floor(MAX_PAYLOAD / blockAlign / 10) * 10;
+
+        // Collect all frames first to know total length for last-flag accuracy,
+        // but send each chunk immediately as it's ready — no waiting for full synthesis.
         const parts: Int16Array[] = [];
         let totalSamples = 0;
+
         for await (const item of fallbackTts.synthesize(t)) {
+          // User started speaking — abort synthesis immediately
+          if (bargeInRequested) {
+            console.log('[BARGE-IN] synthesis aborted mid-stream');
+            return;
+          }
           const frame: any = item && item.frame ? item.frame : item;
           if (!frame || !frame.data) continue;
           const pcm: Int16Array = frame.data;
@@ -398,40 +476,42 @@ export default defineAgent({
           parts.push(pcm);
           totalSamples += pcm.length;
         }
-        if (!totalSamples) return;
+
+        if (!totalSamples || bargeInRequested) return;
+
+        // Merge into single buffer then stream chunks with correct last-flag
         const full = new Int16Array(totalSamples);
         let off = 0;
         for (const p of parts) { full.set(p, off); off += p.length; }
 
-        // 2) Emit as RAW-PCM chunks with a 6-byte header (even offset so PCM is
-        // 2-byte aligned): [0x01, seqHi, seqLo, lastFlag, ch, reserved].
-        const MAX_PAYLOAD = 14000;
-        const samplesPerChunk = Math.floor(MAX_PAYLOAD / blockAlign / 10) * 10;
         let sent = 0;
         let seq = 0;
-        let chunks = 0;
         while (sent < totalSamples) {
+          if (bargeInRequested) {
+            console.log('[BARGE-IN] chunk publishing aborted');
+            return;
+          }
           const n = Math.min(samplesPerChunk, totalSamples - sent);
+          const isLast = sent + n >= totalSamples;
           const dataSize = n * blockAlign;
           const buf = new ArrayBuffer(6 + dataSize);
           const dv = new DataView(buf);
           dv.setUint8(0, 0x01);
           dv.setUint16(1, seq, false);
-          dv.setUint8(3, sent + n >= totalSamples ? 1 : 0); // last flag
+          dv.setUint8(3, isLast ? 1 : 0);
           dv.setUint8(4, ch);
-          dv.setUint8(5, 0); // reserved padding to keep PCM 2-byte aligned
+          dv.setUint8(5, 0);
           new Int16Array(buf, 6).set(full.subarray(sent, sent + n));
-          const u8 = new Uint8Array(buf);
-          await ctx.room.localParticipant.publishData(u8, { reliable: false, topic: 'agent-audio' })
-            .catch((e: any) => console.log('[DATACH-FB] publishData ERR', e && e.message));
+          await ctx.room.localParticipant.publishData(
+            new Uint8Array(buf),
+            { reliable: true, topic: 'agent-audio' }
+          ).catch((e: any) => console.log('[DATACH-FB] publishData ERR', e?.message));
           sent += n;
           seq++;
-          chunks++;
         }
-        if (((globalThis as any).__dcFbCount = ((globalThis as any).__dcFbCount || 0) + 1) <= 3)
-          console.log('[DATACH-FB] published pcm chunks', { chunks, totalSamples, sr, ch });
+        console.log('[DATACH-FB] streamed', { seq, totalSamples });
       } catch (e: any) {
-        console.log('[DATACH-FB] synthesize/publish ERR', e && e.message);
+        console.log('[DATACH-FB] synthesize/publish ERR', e?.message);
       }
     }
 
@@ -511,7 +591,7 @@ export default defineAgent({
     });
     // FFI-level error surfacing
     try {
-      const { FfiClient } = await import('@livekit/rtc-node');
+      const { FfiClient } = await import('@livekit/rtc-node') as any;
       FfiClient.instance.on('ffiError', (e: any) => console.log('[STAGE9c] FFI ERROR', JSON.stringify(e)));
     } catch (e) { console.log('[STAGE9c] ffiImportErr', (e as Error).message); }
 
@@ -529,6 +609,8 @@ export default defineAgent({
 
     // Save transcript on disconnect
     ctx.room.on('disconnected', async () => {
+      clearInterval(_probe);
+      ragCache.delete(roomName);
       const duration = Math.round((Date.now() - startTime) / 1000);
 
       const finalTranscript =
