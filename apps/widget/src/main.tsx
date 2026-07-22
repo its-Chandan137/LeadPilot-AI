@@ -281,8 +281,10 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
 
   const [voiceState, setVoiceState] = useState<"idle" | "connecting" | "active" | "ending">("idle");
   const [room, setRoom] = useState<Room | null>(null);
-  // Live voice transcript (user speech + AI reply), shown word-by-word during a call.
-  const [liveTranscript, setLiveTranscript] = useState<{ role: "user" | "assistant"; text: string; final: boolean }[]>([]);
+  // Interim user transcript shown during active voice call (replaced with final ChatMessage on recognition complete).
+  const [interimText, setInterimText] = useState("");
+  // True while the agent is processing a reply (between final user transcript and assistant reply).
+  const [voiceThinking, setVoiceThinking] = useState(false);
   // Track the currently playing audio source so we can interrupt it if a new
   // utterance arrives before the previous one finishes, or on call end.
   let currentAudioSource: AudioBufferSourceNode | null = null;
@@ -683,19 +685,18 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
               new Uint8Array(payload);
             const msg = JSON.parse(new TextDecoder().decode(raw)) as { role: "user" | "assistant"; text: string; final: boolean };
             if (!msg || !msg.role) return;
-            setLiveTranscript((prev) => {
-              const next = [...prev];
+            if (msg.role === 'user') {
               if (msg.final) {
-                const idx = next.findIndex((l) => l.role === msg.role && !l.final);
-                if (idx >= 0) next[idx] = { role: msg.role, text: msg.text, final: true };
-                else next.push({ role: msg.role, text: msg.text, final: true });
+                setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'user', content: msg.text, createdAt: new Date() }]);
+                setInterimText('');
+                setVoiceThinking(true);
               } else {
-                const idx = next.findIndex((l) => l.role === msg.role && !l.final);
-                if (idx >= 0) next[idx] = { role: msg.role, text: msg.text, final: false };
-                else next.push({ role: msg.role, text: msg.text, final: false });
+                setInterimText(msg.text);
               }
-              return next;
-            });
+            } else if (msg.final) {
+              setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: msg.text, createdAt: new Date() }]);
+              setVoiceThinking(false);
+            }
           } catch (e) {
             console.error('[TRANSCRIPT] parse error:', e);
           }
@@ -785,6 +786,15 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
 
       newRoom.on(RoomEvent.Disconnected, () => {
         clearInterval(statTimer);
+        // Stop any playing audio immediately when call ends
+        if (currentAudioSource) {
+          try { currentAudioSource.stop(); } catch {}
+          currentAudioSource.disconnect();
+          currentAudioSource = null;
+        }
+        pending = [];
+        expectedSeq = 0;
+        utteranceAborted = true;
         setVoiceState("idle");
         setRoom(null);
       });
@@ -817,7 +827,7 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
     await room.disconnect();
     setRoom(null);
     setVoiceState("idle");
-    setLiveTranscript([]);
+    setInterimText('');
   }
 
   const hasUserMessages = messages.some((m) => m.role === "user");
@@ -893,22 +903,17 @@ function Widget({ clientId, apiUrl }: { clientId: string; apiUrl: string }) {
             </button>
           </div>
         )}
-        {voiceState === "active" && (
-          <div className="lp-voice-transcript">
-            {liveTranscript.length === 0 && (
-              <div className="lp-vt-line lp-vt-assistant lp-vt-pending">Listening…</div>
-            )}
-            {liveTranscript.map((line, i) => (
-              <div
-                key={i}
-                className={`lp-vt-line lp-vt-${line.role}${line.final ? "" : " lp-vt-pending"}`}
-              >
-                <span className="lp-vt-role">{line.role === "user" ? "You" : (config?.botName ?? "Assistant")}:</span>{" "}
-                <span className="lp-vt-text">{line.text}</span>
-                {!line.final && <span className="lp-vt-caret">▍</span>}
-              </div>
-            ))}
+        {interimText && (
+          <div className="lp-message-wrap">
+            <div className="lp-bubble lp-user" style={{ opacity: 0.7 }}>
+              {interimText}
+              <span className="lp-vt-caret">▍</span>
+            </div>
           </div>
+        )}
+        {voiceThinking && <TypingIndicator />}
+        {voiceState === "active" && !interimText && !voiceThinking && messages.length === 0 && (
+          <div className="lp-vt-line lp-vt-assistant lp-vt-pending" style={{ padding: '12px 14px', fontSize: 13, color: '#64748b' }}>Listening…</div>
         )}
         <div ref={bottomRef} />
       </>
